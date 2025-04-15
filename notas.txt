@@ -1,0 +1,87 @@
+Nomes com siglas (iniciais que soam bem)
+
+    LIMA – Levantamento Inteligente do Mercado Livre de Anúncios
+    (curto, fácil de lembrar, remete ao nome "Mercado LIvre")
+
+    SAMEL – Scraper Automático do Mercado Livre
+    (soa como um nome próprio: "Samuel")
+
+    MELI-DATA – Mercado Livre Data Extractor
+    (usa o próprio apelido da empresa: MELI)
+
+    DAML – Dados de Anúncios do Mercado Livre
+    (simples e direto)
+
+    EXA-MELI – Extrator de Anúncios do Mercado Livre
+
+Nomes criativos com siglas "tech"
+
+    MLEX – Mercado Livre Extractor
+    (curto e com cara de ferramenta técnica)
+
+    SML – Scraper Mercado Livre
+    (minimalista)
+
+    MLSpy – Mercado Livre Spy
+    (mais ousado, estilo “espionagem de dados públicos”)
+
+    M-Tracker – Mercado Tracker
+    (tracking de anúncios)
+
+    MLDigger – Mercado Livre Digger
+    (como um “garimpeiro de dados”)
+
+
+
+### IDEIAS DE NOMES ###
+
+meli2csv
+
+/// logo -> https://github.com/quasilyte/gopherkon
+
+
+    DataHunt ML – "caça aos dados no Mercado Livre"
+
+    BuscaDex – Busca + Indexação de dados
+
+    Mercado Extractor (ou MExtract) – direto e profissional
+
+    AdMiner ML – minerador de anúncios do Mercado Livre
+
+    BuscaScraper – bem literal, mas claro
+
+📦 Nomes que sugerem inteligência de mercado / monitoramento
+
+    MercadoIntel – Inteligência de anúncios do ML
+
+    MLInsights – Insights de produtos do Mercado Livre
+
+    AdMonitor ML – Monitoramento e análise de anúncios
+
+    OfertaScan – Scanner de ofertas
+
+    MLTrackr – nome mais moderno e com cara de SaaS
+
+📄 Nomes que reforçam a ideia de gerar relatórios/CSV
+
+    CSV Hunter – direto, com toque tech
+
+    ListLab ML – Laboratório de listas/análises do ML
+
+    MListify – Transforma resultados em listas estruturadas
+
+    AdReport ML – Gera relatórios dos anúncios
+
+    Busca2CSV – Busca → Dados → CSV
+
+🧠 Nomes criativos que misturam conceitos
+
+    Mercalyzer – Mercado + Analyzer
+
+    ScrapMLyze – Scrape + Analyze + Mercado Livre
+
+    FreteGrátis? – um nome provocativo e divertido
+
+    PreçoNinja ML – soa afiado e útil
+
+    LojaLupa – uma lupa nas lojas/anúncios
