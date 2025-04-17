@@ -4,6 +4,8 @@
 
 Fácil de usar e simples, não precisa de login na conta do marketplace, pagamento ou qualquer outra informação
 
+Compatível com sistemas Windows quanto Unix
+
 ---
 <br>
 
@@ -50,6 +52,8 @@ go run main.go
 Você será guiado no terminal para digitar:
 1. O termo da busca (ex: `"smartphone xiaomi"`)
 2. A quantidade de anúncios a serem extraídos
+
+>Os arquivos CSV gerados serão salvos automaticamente em uma pasta chamada extracoes, criada no mesmo local do executável — isso funciona tanto em Windows quanto em sistemas Unix.
 
 ---
 

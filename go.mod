@@ -1,4 +1,4 @@
-module ml-scrapper
+module market2csv
 
 go 1.24.0
 

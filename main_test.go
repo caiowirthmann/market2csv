@@ -12,7 +12,7 @@ func TestTratarQtdResultados(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt, func(t *testing.T) {
-			resultado, err := tratarQtdResultados(tt)
+			resultado, err := TratarQtdResultados(tt)
 			if err != nil {
 				t.Fatalf("Erro ao converter string [%v]", err)
 			}
