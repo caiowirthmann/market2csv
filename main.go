@@ -1,9 +1,8 @@
 package main
 
 // TODO:
-// Adicionar delays aleatorios para não cair em captcha, algum limitador
 // Adicionar agentes para fezer a rotação do srape e não cair no limitador também
-// Paginação (por enquanto pega somente a 1a pagina) --> Mas também estudar se faz sentido trazer essa opção
+// Convertes valores que estão em string para numerico
 
 import (
 	"bufio"
@@ -237,7 +236,6 @@ func (a *anuncioML) VendedorLink(prod colly.HTMLElement) {
 	a.vendedorML.linkVendedor = prod.Request.AbsoluteURL(prod.ChildAttr("div.ui-seller-data-footer__container a", "href"))
 }
 
-// TODO: Ajustar função para converter em int. Tratar texto e remover "(", ")", "disponivel"
 // Alem do numero, pode aparecer "Ultimo disponível" --> Nesse caso irá ser transformado para 1
 // Como o texto está envolvido por ( ), é removido por filtrar o 1º e ultimo caracter da string. E isso só acontece se não for o ultimo disponível
 // Função busca as duas tags já que ML traz em lugares diferentes a informação caso seja o ultimo em estoque (genial isso kkkk)
@@ -248,7 +246,18 @@ func (a *anuncioML) Estoque(prod colly.HTMLElement) {
 
 	if len(estoqueUltimo) != 0 && estoqueUltimo == ultimoEstoque {
 		a.estoque = "1"
+		return
+	}
+	if estoqueNaoUltimo == "" && estoqueUltimo == "" {
+		a.estoque = "0"
+		return
 	} else {
+		// ta "funcionado", mas precisa de mais testes
+		// utils.LogarErroFunc("estoque", map[string]any{
+		// 	"estoqueNaoUltimo": estoqueNaoUltimo,
+		// 	"estoqueUltimo":    estoqueUltimo,
+		// 	"anuncio":          a.link,
+		// }, nil)
 		estoqueNaoUltimo = strings.Replace(estoqueNaoUltimo, "+", "", -1)
 		s := strings.Split(estoqueNaoUltimo, " ")
 		a.estoque = s[0][1:]
@@ -432,10 +441,6 @@ func main() {
 			}
 			inputSolicitado = true
 		}
-		// TODO
-		// Logica para aceitar um valor de quantos anuncios vao ser analisados
-		// se passado 0, "", roda até quantidadeResultados
-
 		if err := e.DOM.Find("ul.ui-search-top-keywords__list").Text(); len(err) != 0 {
 			e.ForEach("section.ui-search-top-keywords ul.ui-search-top-keywords__list a", func(i int, keyword *colly.HTMLElement) {
 				resultadoScrapper.buscaRelacionada = append(resultadoScrapper.buscaRelacionada, keyword.Text)

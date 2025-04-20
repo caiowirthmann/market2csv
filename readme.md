@@ -25,7 +25,7 @@ Compatível com sistemas Windows quanto Unix
   - Link do anúncio
   
 - Exporta todos os dados para um arquivo `.csv` com o nome da pesquisa e data para fácil acesso e indexação
-
+- Gera um log de qualquer erro que aconteça durante a extração para facilitar a correção de bugs
 ---
 <br>
 
