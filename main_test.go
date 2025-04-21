@@ -1,6 +1,7 @@
 package main
 
 import (
+	"market2csv/scraper/mercadolivre"
 	"testing"
 )
 
@@ -12,7 +13,7 @@ func TestTratarQtdResultados(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt, func(t *testing.T) {
-			resultado, err := TratarQtdResultados(tt)
+			resultado, err := mercadolivre.TratarQtdResultados(tt)
 			if err != nil {
 				t.Fatalf("Erro ao converter string [%v]", err)
 			}
