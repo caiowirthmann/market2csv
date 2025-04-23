@@ -3,11 +3,17 @@ package mercadolivre
 // package para scrape do mercado livre
 // contem todas as funções exclusivas ao tratamento dos dados e estrutura do scrape
 
+// TODO
+// tipo anuncio
+// tratamento da desc
+// adicionar log nas funcoes
+
 import (
 	"encoding/csv"
 	"fmt"
 	"market2csv/utils"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -27,23 +33,24 @@ type Anuncio struct {
 	full                  string
 	freteGratis           string // possivelmente cortar ou deixar para implementar futuramente. Depende do CEP, local vendedor, se está logado ou não
 	estoque               string // trocado temporariamente para debug
+	condicao              string
 	quantidadeVendas      string
 	// marca                 string // Temporariamente desativado
 
-	Vendedor
+	vendedor
 
 	// - Ficha tecnica ==> entender como implementar esse campo, mas por enquanto é só uma idéia
 
 }
 
 // dados vendedor
-type Vendedor struct {
+type vendedor struct {
 	nome         string
 	linkVendedor string
 }
 
 // une os valores do anuncio. Caso não tenha centavos, passar a segunda string vazia que a função converte em 00
-func ConverterPrecoFloat(s1, s2 string) (vlrAnuncio float64, err error) {
+func converterPrecoFloat(s1, s2 string) (vlrAnuncio float64, err error) {
 	if s2 == "" {
 		s2 = "00"
 	}
@@ -54,7 +61,7 @@ func ConverterPrecoFloat(s1, s2 string) (vlrAnuncio float64, err error) {
 	if vlrAnuncio, err := strconv.ParseFloat(s, 64); err == nil {
 		return vlrAnuncio, nil
 	}
-	utils.LogarErroFunc("ConverterPrecoFloat", map[string]any{
+	utils.LogarErroFunc("converterPrecoFloat", map[string]any{
 		"s1":         s1,
 		"s2":         s2,
 		"vlrAnuncio": vlrAnuncio,
@@ -83,8 +90,7 @@ func TratarQtdResultados(resultados string) (qtdResult int64, err error) {
 // já que ex: Um anuncio com +25 vendas (que pode ser 25 até 49), se convertido ficaria 25, não seria "preciso" por conta da range
 //
 // Melhor um dado qualitativo preciso do que um quantitativo impreciso
-// TODO: converter função para retornar um int
-func TratarQtdVendas(textoQtdVendas string) (qtdVendas string) {
+func tratarQtdVendas(textoQtdVendas string) (qtdVendas string) {
 	// quando não tem vendas, fica no formato {CONDICAO}, não tem |
 	if strings.Contains(textoQtdVendas, "|") {
 		s := strings.Split(textoQtdVendas, "|")
@@ -145,11 +151,11 @@ func (a *Anuncio) qtdAvaliacoes(prod colly.HTMLElement) {
 
 // Check inicial de PREÇO COM DESCONTO ou PREÇO ATUAL DO ANUNCIO (anuncio que NÃO tem desconto).
 // Valor é "construido" na pagina do ML por 2 elementos: MONEY-AMOUNT_FRACTION e MONEY-AMOUNT_CENTS. Se for um preço "cheio", não tem o cents.
-// Por isso a função constrói o valor primeiro pegando o FRACTION e depois checando a existencia do cents, criando a string e tratando ela com a função ConverterPrecoFloat()
+// Por isso a função constrói o valor primeiro pegando o FRACTION e depois checando a existencia do cents, criando a string e tratando ela com a função converterPrecoFloat()
 func (a *Anuncio) montarPrecoAtual(prod colly.HTMLElement) {
 	precoAtual := prod.DOM.Find(".ui-pdp-price__second-line span.andes-money-amount__fraction").First().Text()
 	if checkprecoAtualCentavos := prod.DOM.Find(".ui-pdp-price__second-line span.andes-money-amount__cents").First().Text(); len(checkprecoAtualCentavos) != 0 { //caso tenha centavos
-		precoAtualConvertido, err := ConverterPrecoFloat(precoAtual, checkprecoAtualCentavos)
+		precoAtualConvertido, err := converterPrecoFloat(precoAtual, checkprecoAtualCentavos)
 		if err != nil {
 			utils.LogarErroFunc("precoAtual", map[string]any{
 				"precoAtual":              precoAtual,
@@ -162,7 +168,11 @@ func (a *Anuncio) montarPrecoAtual(prod colly.HTMLElement) {
 			a.precoAtual = precoAtualConvertido
 		}
 	} else {
-		a.precoAtual, _ = ConverterPrecoFloat(precoAtual, "")
+		x, err := converterPrecoFloat(precoAtual, "")
+		if err != nil {
+			fmt.Println(err)
+		}
+		a.precoAtual = x
 	}
 }
 
@@ -170,10 +180,10 @@ func (a *Anuncio) montarPrecoAtual(prod colly.HTMLElement) {
 // O Mercado Livre só mostra essa linha quando existe algum desconto no anuncio. Por isso em casos no qual NÃO existe desconto, esse valor é igual ao precoAtual
 // Para fins analíticos, faz mais sentido manter os dois valores iguais do que colocar 0(zero). Ex: caso for calculado um percentual de desconto, o calculo seria feito errado se não rolasse tratamento na função de desconto.
 // Valor é "construido" na pagina do ML por 2 elementos: MONEY-AMOUNT_FRACTION e MONEY-AMOUNT_CENTS. Se for um preço "cheio", não tem o cents.
-// Por isso a função constrói o valor primeiro pegando o FRACTION e depois checando a existencia do cents, criando a string e tratando ela com a função ConverterPrecoFloat()
+// Por isso a função constrói o valor primeiro pegando o FRACTION e depois checando a existencia do cents, criando a string e tratando ela com a função converterPrecoFloat()
 func (a *Anuncio) montarPrecoBase(prod colly.HTMLElement) {
 	if checkPrecoBase := prod.DOM.Find(".ui-pdp-price__original-value span.andes-money-amount__fraction").First().Text(); len(checkPrecoBase) != 0 {
-		precoBaseConvertido, err := ConverterPrecoFloat(checkPrecoBase, prod.DOM.Find(".ui-pdp-price__original-value span.andes-money-amount__cents").First().Text())
+		precoBaseConvertido, err := converterPrecoFloat(checkPrecoBase, prod.DOM.Find(".ui-pdp-price__original-value span.andes-money-amount__cents").First().Text())
 		if err != nil {
 			utils.LogarErroFunc("precoBase", map[string]any{
 				"checkPrecoBase":      checkPrecoBase,
@@ -189,12 +199,17 @@ func (a *Anuncio) montarPrecoBase(prod colly.HTMLElement) {
 	}
 }
 
-// Tratar e remover o {CONDICAO} | ... do texto da venda
 // É mantido como string porque o Mercado Livre só disponibiliza a quantidade de vendas por uma range.
-// Olhar função TratarQtdVendas() para explicação das ranges
+// Olhar função tratarQtdVendas() para explicação das ranges
 func (a *Anuncio) qtdVendas(prod colly.HTMLElement) {
-	s := TratarQtdVendas(prod.ChildText("span.ui-pdp-subtitle"))
+	s := tratarQtdVendas(prod.ChildText("span.ui-pdp-subtitle"))
 	a.quantidadeVendas = strings.Replace(s, "mil", "000", -1)
+}
+
+func (a *Anuncio) condAnuncio(prod colly.HTMLElement) {
+	c := prod.ChildText("span.ui-pdp-subtitle")
+	s := strings.Split(c, "|")
+	a.condicao = s[0]
 }
 
 // Trata string e remove "Vendido por "
@@ -203,14 +218,14 @@ func (a *Anuncio) vendedorNome(prod colly.HTMLElement) {
 	vendedor := prod.ChildText(".ui-seller-data-header__title-container")
 	if strings.Contains(vendedor, prefixo) {
 		vendedor = strings.Replace(vendedor, prefixo, "", -1)
-		a.Vendedor.nome = vendedor
+		a.vendedor.nome = vendedor
 	}
-	a.Vendedor.nome = vendedor
+	a.vendedor.nome = vendedor
 }
 
 // Pega link do vendedor do produto no ML
 func (a *Anuncio) vendedorLink(prod colly.HTMLElement) {
-	a.Vendedor.linkVendedor = prod.Request.AbsoluteURL(prod.ChildAttr("div.ui-seller-data-footer__container a", "href"))
+	a.vendedor.linkVendedor = prod.Request.AbsoluteURL(prod.ChildAttr("div.ui-seller-data-footer__container a", "href"))
 }
 
 // Alem do numero, pode aparecer "Ultimo disponível" --> Nesse caso irá ser transformado para 1
@@ -237,14 +252,37 @@ func (a *Anuncio) montarEstoque(prod colly.HTMLElement) {
 
 // Pega descrição do anuncio. Vem com algumas formatações html simplificada mas por enquanto é relevada
 func (a *Anuncio) extrairDescricao(prod colly.HTMLElement) {
-	a.descricao = prod.ChildText(".ui-pdp-description__content")
+	textoDesc := prod.DOM.Find(".ui-pdp-description__content").Text()
+	if textoDesc == "" {
+		utils.LogarErroFunc("extrairDescricao", map[string]any{
+			"textoDesc": textoDesc,
+			"anuncio":   a.link,
+		}, nil)
+		a.descricao = textoDesc
+		return
+	}
+
+	// troca <br> e <br/> por \n
+	reBR := regexp.MustCompile(`(?i)<br\s*/?>`)
+	textoDesc = reBR.ReplaceAllString(textoDesc, " - ")
+
+	// remove tag html da desc caso tenha
+	reTags := regexp.MustCompile(`<[^>]+>`)
+	texto := reTags.ReplaceAllString(textoDesc, "")
+
+	texto = strings.TrimSpace(texto)
+
+	// duplica "" para não quebrar csv em importação
+	// texto = strings.ReplaceAll(texto, `"`, `""`)
+
+	a.descricao = `"` + texto + `"`
 }
 
-func (a *Anuncio) ExtrairLinkAnuncio(prod *colly.HTMLElement) {
+func (a *Anuncio) extrairLinkAnuncio(prod *colly.HTMLElement) {
 	a.link = prod.Request.URL.String()
 }
 
-func (a *Anuncio) TituloAnuncio(prod *colly.HTMLElement) {
+func (a *Anuncio) tituloAnuncio(prod *colly.HTMLElement) {
 	a.titulo = prod.ChildText(".ui-pdp-title")
 }
 
@@ -298,15 +336,16 @@ func ExportarCSV(buscaML string, anuncios []Anuncio) error {
 	writer := csv.NewWriter(arquivo)
 	writer.Comma = ';' // separador é ; para evitar problema com formatação de numeros e algum texto que possivelmente possa ter ',' nele
 	defer writer.Flush()
-	cabecalho := []string{"titulo", "preco_base", "preco_atual", "quantidade_vendas",
+	cabecalho := []string{"titulo", "condição", "preco_base", "preco_atual", "quantidade_vendas",
 		"estoque", "patrocinado", "tem_full", "nota", "quantidade_reviews", "link_anuncio",
-		"vendedor", "vendedor_link"}
+		"vendedor", "vendedor_link", "descricao"}
 	if err := writer.Write(cabecalho); err != nil {
 		return fmt.Errorf("erro ao adicionar cabeçalho ao csv: [%v]", err)
 	}
 	for _, anuncio := range anuncios {
 		linha := []string{
 			anuncio.titulo,
+			anuncio.condicao,
 			strconv.FormatFloat(anuncio.precoBase, 'f', 2, 64),
 			strconv.FormatFloat(anuncio.precoAtual, 'f', 2, 64),
 			anuncio.quantidadeVendas,
@@ -316,8 +355,9 @@ func ExportarCSV(buscaML string, anuncios []Anuncio) error {
 			anuncio.nota,
 			anuncio.quantidadeReviews,
 			anuncio.link,
-			anuncio.Vendedor.nome,
-			anuncio.Vendedor.linkVendedor,
+			anuncio.vendedor.nome,
+			anuncio.vendedor.linkVendedor,
+			anuncio.descricao,
 		}
 		if err := writer.Write(linha); err != nil {
 			return fmt.Errorf("erro ao escrever linha para o csv [%v]", err)
@@ -338,9 +378,12 @@ func NovoAnuncio(prod *colly.HTMLElement) Anuncio {
 	a.notaAvaliacao(*prod)
 	a.qtdAvaliacoes(*prod)
 	a.qtdVendas(*prod)
+	a.condAnuncio(*prod)
 	a.temFull(*prod)
 	a.temPatrocinado()
 	a.vendedorLink(*prod)
+	a.tituloAnuncio(prod)
+	a.extrairLinkAnuncio(prod)
 
 	return a
 }
