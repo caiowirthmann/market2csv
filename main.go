@@ -47,6 +47,7 @@ func main() {
 	reader := bufio.NewReader(os.Stdin)
 	var termoBuscaML string
 
+	// garante que input do usuario é valido ou que foi passado algo (não pode ser vazio)
 	for {
 		fmt.Printf("Digite a sua pesquisa para gerar um csv com os dados dos anúncios buscados no:\n")
 		input, err := reader.ReadString('\n')
@@ -82,7 +83,7 @@ func main() {
 
 	// define limite de chamados em paralelo para esse coletor
 	scrapperDetalhado.Limit(&colly.LimitRule{
-		RandomDelay: 1 * time.Second, // delay para não bater no rate limit do site (ainda não descobri qual o limite, mas é bom não forçar, pra não dar merda quando começar a pegar multi pagina), ou sobrecarregar o site
+		RandomDelay: 2 * time.Second, // delay para não bater no rate limit do site (ainda não descobri qual o limite, mas é bom não forçar, pra não dar merda quando começar a pegar multi pagina), ou sobrecarregar o site
 		// que não tenha uma forma de proteção ou gargalo de request
 	})
 

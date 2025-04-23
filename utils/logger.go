@@ -44,7 +44,7 @@ func LogarErroFunc(nomeFuncao string, parametrosFunc map[string]any, err error) 
 	// construtor
 	parametrosStr := ""
 	for k, v := range parametrosFunc {
-		parametrosStr += fmt.Sprintf("%s=%s/", k, v)
+		parametrosStr += fmt.Sprintf("%s=%s||", k, v)
 	}
 
 	LogErro.Printf("Função: %s || Parametros: [%s] || Erro %v\n", nomeFuncao, parametrosStr, err)
