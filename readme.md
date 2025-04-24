@@ -23,8 +23,10 @@ Compatível com sistemas Windows quanto Unix
   - Nota
   - Vendedor + link do vendedor
   - Link do anúncio
+  - Ficha técnica completa do anúncio
   
 - Exporta todos os dados para um arquivo `.csv` com o nome da pesquisa e data para fácil acesso e indexação
+- Ficha técnica é exportada para um arquivo `.JSON`
 - Gera um log de qualquer erro que aconteça durante a extração para facilitar a correção de bugs
 ---
 <br>
@@ -49,19 +51,19 @@ cd market2csv
 go run main.go
 ```
 
-Você será guiado no terminal para digitar:
-1. O termo da busca (ex: `"smartphone xiaomi"`)
-2. A quantidade de anúncios a serem extraídos
+1. Ao executar o programa, será pedido que digite o que quer pesquisar nos marketplaces: ex (`smartphone xiaomi`)
+2. A quantidade de anúncios que serão analisados e exportados
+<br>
 
->Os arquivos CSV gerados serão salvos automaticamente em uma pasta chamada extracoes, criada no mesmo local do executável — isso funciona tanto em Windows quanto em sistemas Unix.
+>O arquivo CSV gerado será salvo automaticamente em uma pasta chamada `extracoes`, criada no mesmo local do executável — isso funciona tanto em Windows quanto em sistemas Unix.
 
 ---
 
 ## 🧾 Exemplo do arquivo gerado (.csv)
 
-|titulo|preço base|preço atual|quantidade vendas|estoque|patrocinado|tem Full?|nota|quantidade reviews|link anuncio|descricao|nome vendedor|link vendedor|
-|------------|-----|------|-----------|----------|-------|-----|-----|-------|------|-----|------|------|
-|Produto1| 65,99|53,50|30|5|nao|sim|5.0|55|linkdoanuncio.com|descricao do produto|vendedor x|linkvendedor.com
+|titulo|condicao|preço base|preço atual|quantidade vendas|estoque|patrocinado|tem Full?|nota|quantidade reviews|link anuncio|nome vendedor|link vendedor|descricao|
+|------------|---|-----|------|-----------|----------|-------|-----|-----|-------|------|-----|------|------|
+|Produto1|novo|65,99|53,50|30|5|nao|sim|5.0|55|linkdoanuncio.com|descricao do produto|vendedor x|linkvendedor.com
 
 ---
 
@@ -127,16 +129,15 @@ A coluna de `Full` da ferramenta mostra apenas se o anúncio tem Mercado Envios 
 
 ## 🛠️ Roadmap de funcionalidades e melhorias
 
-- [x] Mercado Livre
-    - [ ] Ficha técnica
+- [ ] Mercado Livre:
+    - [x] Ficha técnica (exportado em um arquivo separado)
 - [ ] Shopee
 - [ ] Amazon
 - [ ] Shein
-- [ ] Exportação do arquivo para `JSON`
-- [ ] Personalização do arquivo de exportação:
-    - [ ] Incluir/Não incluir campo
-    - [ ] Ordem
-    - [ ] 
-
+- [ ] Exportação do arquivo dos dados do anúncio para `JSON`
+- [ ] Configuração para permitir personalização do arquivo de exportação:
+    - [ ] Incluir/Não incluir campo no `.csv`
+    - [ ] Ordem das colunas
+    - [ ] Configuração de quais campos são incluidos no arquivo da ficha técnica para identificação de qual anúncio é (por padrão vem titulo e link do aúncio)
 
 ---

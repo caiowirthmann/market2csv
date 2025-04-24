@@ -3,13 +3,9 @@ package mercadolivre
 // package para scrape do mercado livre
 // contem todas as funções exclusivas ao tratamento dos dados e estrutura do scrape
 
-// TODO
-// tipo anuncio
-// tratamento da desc
-// adicionar log nas funcoes
-
 import (
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"market2csv/utils"
 	"os"
@@ -18,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/gocolly/colly/v2"
 )
 
@@ -31,13 +28,12 @@ type Anuncio struct {
 	quantidadeReviews     string
 	patrocinado           string
 	full                  string
-	freteGratis           string // possivelmente cortar ou deixar para implementar futuramente. Depende do CEP, local vendedor, se está logado ou não
-	estoque               string // trocado temporariamente para debug
+	estoque               string
 	condicao              string
 	quantidadeVendas      string
-	// marca                 string // Temporariamente desativado
 
 	vendedor
+	FichaTecnica
 
 	// - Ficha tecnica ==> entender como implementar esse campo, mas por enquanto é só uma idéia
 
@@ -46,7 +42,12 @@ type Anuncio struct {
 // dados vendedor
 type vendedor struct {
 	nome         string
+	tipoLoja     string
 	linkVendedor string
+}
+
+type FichaTecnica struct {
+	caracteristicas map[string]any
 }
 
 // une os valores do anuncio. Caso não tenha centavos, passar a segunda string vazia que a função converte em 00
@@ -88,7 +89,6 @@ func TratarQtdResultados(resultados string) (qtdResult int64, err error) {
 // funcao que trata a string que contem a qtd de vendas --> vem no formato {CONDIÇÃO | QTD VENDAS}. Ex: "Novo  |  +1000 vendidos". Remove texto
 // e retorna string xxx vendidos. Como o ml fornece a qtd de vendas por uma range, não faz muito sentido cortar o +... e converter em um int
 // já que ex: Um anuncio com +25 vendas (que pode ser 25 até 49), se convertido ficaria 25, não seria "preciso" por conta da range
-//
 // Melhor um dado qualitativo preciso do que um quantitativo impreciso
 func tratarQtdVendas(textoQtdVendas string) (qtdVendas string) {
 	// quando não tem vendas, fica no formato {CONDICAO}, não tem |
@@ -103,6 +103,7 @@ func tratarQtdVendas(textoQtdVendas string) (qtdVendas string) {
 }
 
 // check se é patrocinado pela URL. Na query tem a tag is_advertising=true, indicando que teve impulsionamento pelo mercado ADS
+// só é possível checar pela URL da pagina de resultados
 func (a *Anuncio) temPatrocinado() {
 	if strings.Contains(a.link, "is_advertising=true") {
 		a.patrocinado = "sim"
@@ -111,15 +112,21 @@ func (a *Anuncio) temPatrocinado() {
 	}
 }
 
-// check se tem frete gratis --> não faz muito sentido, já que o frete pode variar por região e outros fatores que podem variar se estiver logado ou não, se tem item no carrinho
-// se tem algum cupom, promoção ativa... Mas por enquanto pelo menos da um "norte" sobre o frete do anuncio
-// talvez essa função seja cortada, por enquanto ta aqui
-func (a *Anuncio) anuncioFrete(prod colly.HTMLElement) {
-	if temFreteGratis := prod.ChildText(".poly-card__content div.poly-component__shipping"); len(temFreteGratis) != 0 {
-		a.freteGratis = "Sim"
-	} else {
-		a.freteGratis = "Não"
+// tipo da loja do vendedor é possível pegar pelo link do vendedor e as tags da query do link
+func (a *Anuncio) tipoLojaVendedor() {
+	if strings.Contains(a.linkVendedor, "typeSeller=official_store") {
+		a.tipoLoja = "Loja oficial"
 	}
+	if strings.Contains(a.linkVendedor, "typeSeller=eshop") {
+		a.tipoLoja = "Eshop"
+	}
+	if strings.Contains(a.linkVendedor, "typeSeller=classic") {
+		a.tipoLoja = "Padrão"
+	}
+	utils.LogarErroFunc("tipoLojaVendedor - DESCONHECIDO", map[string]any{
+		"vendedor": a.vendedor,
+		"linkLoja": a.linkVendedor,
+	}, nil)
 }
 
 // check se tem full pela existencia do texto "enviado pelo", já texto full é um .svg que precede o texto
@@ -206,9 +213,20 @@ func (a *Anuncio) qtdVendas(prod colly.HTMLElement) {
 	a.quantidadeVendas = strings.Replace(s, "mil", "000", -1)
 }
 
+// Trata a string {CONDIÇÃO | xx vendidos} que aparece nos anúncios
+// e pega somente a condição
 func (a *Anuncio) condAnuncio(prod colly.HTMLElement) {
 	c := prod.ChildText("span.ui-pdp-subtitle")
+
+	// log caso não exista esse elemento na página
+	if c == "" {
+		utils.LogarErroFunc("condAnuncio", map[string]any{
+			"texto": c,
+			"link":  a.link,
+		}, nil)
+	}
 	s := strings.Split(c, "|")
+	s[0] = strings.TrimSpace(s[0])
 	a.condicao = s[0]
 }
 
@@ -216,16 +234,33 @@ func (a *Anuncio) condAnuncio(prod colly.HTMLElement) {
 func (a *Anuncio) vendedorNome(prod colly.HTMLElement) {
 	prefixo := "Vendido por "
 	vendedor := prod.ChildText(".ui-seller-data-header__title-container")
+
+	if vendedor == "" || len(vendedor) == 0 {
+		utils.LogarErroFunc("vendedorNome", map[string]any{
+			"vendedor": vendedor,
+			"link":     a.link,
+		}, nil)
+	}
 	if strings.Contains(vendedor, prefixo) {
 		vendedor = strings.Replace(vendedor, prefixo, "", -1)
+		vendedor = strings.TrimSpace(vendedor)
 		a.vendedor.nome = vendedor
+		return
 	}
 	a.vendedor.nome = vendedor
 }
 
 // Pega link do vendedor do produto no ML
 func (a *Anuncio) vendedorLink(prod colly.HTMLElement) {
-	a.vendedor.linkVendedor = prod.Request.AbsoluteURL(prod.ChildAttr("div.ui-seller-data-footer__container a", "href"))
+
+	link := prod.Request.AbsoluteURL(prod.ChildAttr("div.ui-seller-data-footer__container a", "href"))
+	if link == "" || len(link) == 0 {
+		utils.LogarErroFunc("vendedorLink", map[string]any{
+			"linkVendedor": link,
+			"linkAnuncio":  a.link,
+		}, nil)
+	}
+	a.vendedor.linkVendedor = link
 }
 
 // Alem do numero, pode aparecer "Ultimo disponível" --> Nesse caso irá ser transformado para 1
@@ -247,6 +282,7 @@ func (a *Anuncio) montarEstoque(prod colly.HTMLElement) {
 		estoqueNaoUltimo = strings.Replace(estoqueNaoUltimo, "+", "", -1)
 		s := strings.Split(estoqueNaoUltimo, " ")
 		a.estoque = s[0][1:]
+		return
 	}
 }
 
@@ -278,18 +314,33 @@ func (a *Anuncio) extrairDescricao(prod colly.HTMLElement) {
 	a.descricao = `"` + texto + `"`
 }
 
+// pega link do anuncio completo da request
 func (a *Anuncio) extrairLinkAnuncio(prod *colly.HTMLElement) {
 	a.link = prod.Request.URL.String()
 }
 
+// pega titulo do anúncio da página do anuncio
 func (a *Anuncio) tituloAnuncio(prod *colly.HTMLElement) {
 	a.titulo = prod.ChildText(".ui-pdp-title")
+}
+
+// percorre cada tabela das seções da ficha tecnica do anuncio
+func (a *Anuncio) montarFichaTecnica(prod *colly.HTMLElement) {
+	a.FichaTecnica.caracteristicas = make(map[string]any)
+	prod.DOM.Find("tr.ui-vpp-striped-specs__row").Each(func(i int, ficha *goquery.Selection) {
+		key := ficha.Find("th div.andes-table__header__container").Text()
+		val := ficha.Find("td span.andes-table__column--value").Text()
+
+		if key != "" && val != "" {
+			a.FichaTecnica.caracteristicas[key] = val
+		}
+	})
 }
 
 // Cria o csv em uma pasta "extracoes" com os dados extraidos dos anuncios da pesquisa
 func ExportarCSV(buscaML string, anuncios []Anuncio) error {
 	/*
-	   caso for converter para binário e quiser travar onde a pasta será criada, modificar para o seguinte código
+	   caso converter p/ binário forçar local da pasta, trocar para codigo abaixo
 
 	   // Caminho relativo à pasta do executável
 	   	execPath, err := os.Executable()
@@ -338,7 +389,7 @@ func ExportarCSV(buscaML string, anuncios []Anuncio) error {
 	defer writer.Flush()
 	cabecalho := []string{"titulo", "condição", "preco_base", "preco_atual", "quantidade_vendas",
 		"estoque", "patrocinado", "tem_full", "nota", "quantidade_reviews", "link_anuncio",
-		"vendedor", "vendedor_link", "descricao"}
+		"vendedor", "vendedor_link", "tipo_loja", "descricao"}
 	if err := writer.Write(cabecalho); err != nil {
 		return fmt.Errorf("erro ao adicionar cabeçalho ao csv: [%v]", err)
 	}
@@ -357,19 +408,63 @@ func ExportarCSV(buscaML string, anuncios []Anuncio) error {
 			anuncio.link,
 			anuncio.vendedor.nome,
 			anuncio.vendedor.linkVendedor,
+			anuncio.vendedor.tipoLoja,
 			anuncio.descricao,
 		}
 		if err := writer.Write(linha); err != nil {
 			return fmt.Errorf("erro ao escrever linha para o csv [%v]", err)
 		}
 	}
-	return nil
+	return err
+}
+
+// cria json com a ficha tecnica de cada anuncio {titulo, link, ficha_tecnica}
+// e salva na pagina de extracoes também, mas com sufixo "_fichatecnica"
+func ExportarFichaTecnica(buscaML string, anuncios []Anuncio) error {
+
+	const pastaDestino = "extracoes"
+	if err := os.MkdirAll(pastaDestino, os.ModePerm); err != nil {
+		return fmt.Errorf("não foi possível criar a pasta [%s]. Erro %v", pastaDestino, err)
+	}
+
+	// define nome do arquivo. Por padrão: o-que-foi-pesquisado_no_ML_data-hoje_hora-hoje
+	nomePesquisa := strings.Replace(buscaML, " ", "-", -1)
+	dataExecucao := time.Now().Format("02-01-2006_15-04")
+
+	nomeArquivo := fmt.Sprintf("%s_%s_fichatecnica.json", nomePesquisa, dataExecucao)
+	caminhoArquivo := fmt.Sprintf("%s/%s", pastaDestino, nomeArquivo)
+
+	// criar arquivo
+	arquivo, err := os.Create(caminhoArquivo)
+	if err != nil {
+		return fmt.Errorf("não foi possível criar o arquivo com as fichas técnicas [%s]. Erro: %v", nomeArquivo, err)
+	}
+	defer arquivo.Close()
+
+	type ExportJson struct {
+		Titulo       string         `json:"titulo"`
+		Link         string         `json:"link"`
+		FichaTecnica map[string]any `json:"ficha_tecnica"`
+	}
+	var exportados []ExportJson
+
+	for _, anuncio := range anuncios {
+		exportados = append(exportados, ExportJson{
+			Titulo:       anuncio.titulo,
+			Link:         anuncio.link,
+			FichaTecnica: anuncio.FichaTecnica.caracteristicas,
+		})
+	}
+	encoder := json.NewEncoder(arquivo)
+	encoder.SetIndent("", " ")
+
+	return encoder.Encode(exportados)
+
 }
 
 // Encapsula funções do scrape das info do anuncio
 func NovoAnuncio(prod *colly.HTMLElement) Anuncio {
 	var a Anuncio
-	a.anuncioFrete(*prod)
 	a.extrairDescricao(*prod)
 	a.vendedorNome(*prod)
 	a.montarEstoque(*prod)
@@ -384,6 +479,8 @@ func NovoAnuncio(prod *colly.HTMLElement) Anuncio {
 	a.vendedorLink(*prod)
 	a.tituloAnuncio(prod)
 	a.extrairLinkAnuncio(prod)
+	a.montarFichaTecnica(prod)
+	a.tipoLojaVendedor()
 
 	return a
 }

@@ -178,9 +178,6 @@ func main() {
 	scrapper.Visit(queryPesquisa)
 
 	// fmt.Printf("%#v\n\n", resultadoScrapper.anuncios[:8])
-	fim := time.Since(começo)
-
-	fmt.Printf("Tempo de execução: %v\n", fim)
 
 	err := mercadolivre.ExportarCSV(termoBuscaML, resultadoScrapper.anuncios)
 	if err != nil {
@@ -188,4 +185,15 @@ func main() {
 	} else {
 		fmt.Println("CSV com os dados dos anuncios do Merado Livre criado com sucesso")
 	}
+
+	err2 := mercadolivre.ExportarFichaTecnica(termoBuscaML, resultadoScrapper.anuncios)
+	if err2 != nil {
+		fmt.Println(err2)
+	} else {
+		fmt.Println("Arquivo JSON com a ficha tecnica de cada anuncio criado com sucesso")
+	}
+	fim := time.Since(começo)
+
+	fmt.Printf("Tempo de execução: %v\n", fim)
+
 }
