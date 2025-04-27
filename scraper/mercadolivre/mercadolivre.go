@@ -116,12 +116,15 @@ func (a *Anuncio) temPatrocinado() {
 func (a *Anuncio) tipoLojaVendedor() {
 	if strings.Contains(a.linkVendedor, "typeSeller=official_store") {
 		a.tipoLoja = "Loja oficial"
+		return
 	}
 	if strings.Contains(a.linkVendedor, "typeSeller=eshop") {
 		a.tipoLoja = "Eshop"
+		return
 	}
 	if strings.Contains(a.linkVendedor, "typeSeller=classic") {
 		a.tipoLoja = "Padrão"
+		return
 	}
 	utils.LogarErroFunc("tipoLojaVendedor - DESCONHECIDO", map[string]any{
 		"vendedor": a.vendedor,
@@ -288,13 +291,13 @@ func (a *Anuncio) montarEstoque(prod colly.HTMLElement) {
 
 // Pega descrição do anuncio. Vem com algumas formatações html simplificada mas por enquanto é relevada
 func (a *Anuncio) extrairDescricao(prod colly.HTMLElement) {
-	textoDesc := prod.DOM.Find(".ui-pdp-description__content").Text()
-	if textoDesc == "" {
+	textoDesc, err := prod.DOM.Find(".ui-pdp-description__content").Html()
+	if err != nil {
 		utils.LogarErroFunc("extrairDescricao", map[string]any{
 			"textoDesc": textoDesc,
 			"anuncio":   a.link,
 		}, nil)
-		a.descricao = textoDesc
+		a.descricao = ""
 		return
 	}
 

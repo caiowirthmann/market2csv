@@ -49,10 +49,10 @@ func main() {
 
 	// garante que input do usuario é valido ou que foi passado algo (não pode ser vazio)
 	for {
-		fmt.Printf("Digite a sua pesquisa para gerar um csv com os dados dos anúncios buscados no:\n")
+		fmt.Printf("Digite o que quer pesquisar nos marketplaces:\n")
 		input, err := reader.ReadString('\n')
 		if err != nil {
-			fmt.Println("Erro ao ler a busca. Tente novamente...")
+			fmt.Println("Erro ao ler a pesquisa. Tente novamente...")
 			continue
 		}
 		// é necessario essa manipulação para limpar o '\n' do texto recebido do terminal
@@ -92,10 +92,10 @@ func main() {
 	}
 
 	scrapper.OnRequest(func(r *colly.Request) {
-		fmt.Println("Realizando a busca no Mercado Livre por:", termoBuscaML, "\nURL da pesquisa:", r.URL)
+		fmt.Println("\nRealizando a busca no Mercado Livre por:", termoBuscaML, "\nURL da pesquisa:", r.URL)
 	})
 	scrapper.OnResponse(func(r *colly.Response) {
-		fmt.Println("Coletando dados ...")
+		fmt.Println("\nColetando dados...")
 	})
 	scrapper.OnError(func(r *colly.Response, err error) {
 		fmt.Printf("Erro: %s", err)
@@ -117,9 +117,9 @@ func main() {
 		resultadoScrapper.quantidadeResultados = s
 
 		if !inputSolicitado {
-			fmt.Printf("Foram encontrados %v resultados para a busca\n\n", s)
+			fmt.Printf("Foram encontrados --> %v <-- anuncios para [%s]\n\n", s, termoBuscaML)
 			for {
-				fmt.Printf("Quantos anuncios deseja analisar? -- Quantidade NÃO pode ser maior que %v --\n\nDigite 0 para analisar todos os anuncios encontrados OU Digite outra quantidade:\n", resultadoScrapper.quantidadeResultados)
+				fmt.Printf("Quantos anuncios deseja analisar? Digite um valor entre 1 e %v\n--> Caso queira TODOS os anuncios encontrados, digite 0\n", resultadoScrapper.quantidadeResultados)
 				_, err := fmt.Scanln(&resultadoScrapper.limiteAnuncios)
 				if err != nil || resultadoScrapper.limiteAnuncios < 0 || resultadoScrapper.limiteAnuncios > int(resultadoScrapper.quantidadeResultados) {
 					fmt.Println("Valor inválido. Digite outra opção")
