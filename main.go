@@ -7,12 +7,13 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"market2csv/assets"
-	"market2csv/scraper/mercadolivre"
-	"market2csv/utils"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/caiowirthmann/market2csv/assets"
+	"github.com/caiowirthmann/market2csv/scraper/mercadolivre"
+	"github.com/caiowirthmann/market2csv/utils"
 
 	"github.com/gocolly/colly/v2"
 	"github.com/gocolly/colly/v2/extensions"
@@ -40,7 +41,9 @@ func criarQueryPesquisa(termoPesquisa string) string {
 func main() {
 
 	assets.PrintTelaTerminal()
-	var inputSolicitado bool = false // condicional para que o não rode mais de uma vez o input solicitando quantos anucnios quer analisar
+	// condicional para que não rode mais de uma vez o input solicitando quantos anucnios quer analisar
+	// se passar de mais de uma pagina a quantidade
+	var inputSolicitado bool = false
 
 	começo := time.Now()
 
@@ -69,12 +72,8 @@ func main() {
 
 	utils.InitLogErro(termoBuscaML)
 
-	// 2 - contruir a URL da pesquisa. Args[0] é o nome do programa, por isso é [1:]
-	// pesquisaML := criarArg(args[1:])
 	queryPesquisa := criarQueryPesquisa(termoBuscaML)
-	// fmt.Println(queryPesquisa)
 
-	// 3 - Scrape dos seguintes dados
 	scrapper := colly.NewCollector()
 	scrapperDetalhado := colly.NewCollector(
 		colly.Async(true), // async = true permite rodar em paralelo e evita race condition
@@ -132,15 +131,12 @@ func main() {
 			}
 			inputSolicitado = true
 		}
+
 		if err := e.DOM.Find("ul.ui-search-top-keywords__list").Text(); len(err) != 0 {
 			e.ForEach("section.ui-search-top-keywords ul.ui-search-top-keywords__list a", func(i int, keyword *colly.HTMLElement) {
 				resultadoScrapper.buscaRelacionada = append(resultadoScrapper.buscaRelacionada, keyword.Text)
 			})
 		}
-
-		// e.ForEach(".ui-search-layout__item", func(i int, h *colly.HTMLElement) {
-		// })
-		// fmt.Printf("%#v\n", resultadoScrapper.buscaRelacionada)
 	})
 
 	// Coleta de dados do anuncio
@@ -152,17 +148,13 @@ func main() {
 		resultadoScrapper.anunciosColetados++
 		scrapperDetalhado.Visit(linkAnuncio)
 		scrapperDetalhado.Wait()
-
 	})
 
 	scrapperDetalhado.OnHTML("body main", func(prod *colly.HTMLElement) {
 
-		// fmt.Printf("Buscando dados do anuncio [%s]\n", prod.Request.URL.String())
-		// começoAnuncio := time.Now()
+		// coleta dados do anuncio e "monta" anuncio
 		anuncio := mercadolivre.NovoAnuncio(prod)
-
 		resultadoScrapper.anuncios = append(resultadoScrapper.anuncios, anuncio)
-		// fmt.Printf("Tempo de scrape: %v para o anuncio [%s]\n", time.Since(começoAnuncio), anuncio.link)
 	})
 
 	scrapper.OnHTML("li.andes-pagination__button--next a", func(e *colly.HTMLElement) {
@@ -174,10 +166,7 @@ func main() {
 		e.Request.Visit(proximaPagina)
 	})
 
-	// printf com %#v printa no formato field:data para struct
 	scrapper.Visit(queryPesquisa)
-
-	// fmt.Printf("%#v\n\n", resultadoScrapper.anuncios[:8])
 
 	err := mercadolivre.ExportarCSV(termoBuscaML, resultadoScrapper.anuncios)
 	if err != nil {
@@ -192,8 +181,9 @@ func main() {
 	} else {
 		fmt.Println("Arquivo JSON com a ficha tecnica de cada anuncio criado com sucesso")
 	}
+
 	fim := time.Since(começo)
 
-	fmt.Printf("Tempo de execução: %v\n", fim)
+	fmt.Printf("Tempo de execução: %.2s\n", fim)
 
 }

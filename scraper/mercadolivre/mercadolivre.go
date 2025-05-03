@@ -7,12 +7,14 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"market2csv/utils"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/caiowirthmann/market2csv/utils"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/gocolly/colly/v2"
@@ -90,16 +92,18 @@ func TratarQtdResultados(resultados string) (qtdResult int64, err error) {
 // e retorna string xxx vendidos. Como o ml fornece a qtd de vendas por uma range, não faz muito sentido cortar o +... e converter em um int
 // já que ex: Um anuncio com +25 vendas (que pode ser 25 até 49), se convertido ficaria 25, não seria "preciso" por conta da range
 // Melhor um dado qualitativo preciso do que um quantitativo impreciso
-func tratarQtdVendas(textoQtdVendas string) (qtdVendas string) {
+func tratarQtdVendas(textoQtdVendas string) (qtdVendas string, err error) {
 	// quando não tem vendas, fica no formato {CONDICAO}, não tem |
 	if strings.Contains(textoQtdVendas, "|") {
 		s := strings.Split(textoQtdVendas, "|")
 		s[1] = strings.Replace(s[1], "+", "", -1)
 		corte := strings.Index(s[1], "v") //indice da palavra "vendidas"
 		s[1] = strings.Replace(s[1][:corte], " ", "", -1)
-		return s[1]
+		s[1] = strings.Replace(s[1], "mil", "000", -1)
+
+		return s[1], nil
 	}
-	return "0"
+	return "0", fmt.Errorf("anuncio sem vendas OU com formato do texto não reconhecido. Cheque o log gerado para mais detalhes")
 }
 
 // check se é patrocinado pela URL. Na query tem a tag is_advertising=true, indicando que teve impulsionamento pelo mercado ADS
@@ -113,23 +117,25 @@ func (a *Anuncio) temPatrocinado() {
 }
 
 // tipo da loja do vendedor é possível pegar pelo link do vendedor e as tags da query do link
+// Na função construtora do Anuncio, ela tem que vir APÓS a func vendedorLink()
 func (a *Anuncio) tipoLojaVendedor() {
-	if strings.Contains(a.linkVendedor, "typeSeller=official_store") {
-		a.tipoLoja = "Loja oficial"
-		return
+
+	tipos := map[string]string{
+		"typeSeller=official_store": "Loja oficial",
+		"typeSeller=eshop":          "Eshop",
+		"typeSeller=classic":        "Padrão",
 	}
-	if strings.Contains(a.linkVendedor, "typeSeller=eshop") {
-		a.tipoLoja = "Eshop"
-		return
-	}
-	if strings.Contains(a.linkVendedor, "typeSeller=classic") {
-		a.tipoLoja = "Padrão"
-		return
+
+	for chave, tipo := range tipos {
+		if strings.Contains(a.linkVendedor, chave) {
+			a.tipoLoja = tipo
+			return
+		}
 	}
 	utils.LogarErroFunc("tipoLojaVendedor - DESCONHECIDO", map[string]any{
-		"vendedor": a.vendedor,
+		"vendedor": a.vendedor.nome,
 		"linkLoja": a.linkVendedor,
-	}, nil)
+	}, fmt.Errorf("não foi possível determinar o tipo de loja do vendedor. Por padrão o campo ficará em branco"))
 }
 
 // check se tem full pela existencia do texto "enviado pelo", já texto full é um .svg que precede o texto
@@ -137,7 +143,7 @@ func (a *Anuncio) temFull(prod colly.HTMLElement) {
 	if temFull := prod.ChildText(".ui-pdp-promotions-pill-label__text"); len(temFull) != 0 {
 		a.full = "sim"
 	} else {
-		a.full = "Não"
+		a.full = "não"
 	}
 }
 
@@ -212,8 +218,16 @@ func (a *Anuncio) montarPrecoBase(prod colly.HTMLElement) {
 // É mantido como string porque o Mercado Livre só disponibiliza a quantidade de vendas por uma range.
 // Olhar função tratarQtdVendas() para explicação das ranges
 func (a *Anuncio) qtdVendas(prod colly.HTMLElement) {
-	s := tratarQtdVendas(prod.ChildText("span.ui-pdp-subtitle"))
-	a.quantidadeVendas = strings.Replace(s, "mil", "000", -1)
+	s, err := tratarQtdVendas(prod.ChildText("span.ui-pdp-subtitle"))
+	if err != nil {
+		utils.LogarErroFunc("qtdVendas", map[string]any{
+			"texto":       s,
+			"anuncio":     a.titulo,
+			"linkAnuncio": a.link,
+		}, err)
+		fmt.Println(err)
+	}
+	a.quantidadeVendas = s
 }
 
 // Trata a string {CONDIÇÃO | xx vendidos} que aparece nos anúncios
@@ -224,9 +238,8 @@ func (a *Anuncio) condAnuncio(prod colly.HTMLElement) {
 	// log caso não exista esse elemento na página
 	if c == "" {
 		utils.LogarErroFunc("condAnuncio", map[string]any{
-			"texto": c,
-			"link":  a.link,
-		}, nil)
+			"link": a.link,
+		}, fmt.Errorf("não foi possível extrair a condição do item vendido. Cheque o log gerado para mais detalhes"))
 	}
 	s := strings.Split(c, "|")
 	s[0] = strings.TrimSpace(s[0])
@@ -240,9 +253,9 @@ func (a *Anuncio) vendedorNome(prod colly.HTMLElement) {
 
 	if vendedor == "" || len(vendedor) == 0 {
 		utils.LogarErroFunc("vendedorNome", map[string]any{
-			"vendedor": vendedor,
-			"link":     a.link,
-		}, nil)
+			"vendedor":     vendedor,
+			"link_anuncio": a.link,
+		}, fmt.Errorf("erro ao extrair nome do vendedor. Verificar anuncio e vendedor"))
 	}
 	if strings.Contains(vendedor, prefixo) {
 		vendedor = strings.Replace(vendedor, prefixo, "", -1)
@@ -261,7 +274,8 @@ func (a *Anuncio) vendedorLink(prod colly.HTMLElement) {
 		utils.LogarErroFunc("vendedorLink", map[string]any{
 			"linkVendedor": link,
 			"linkAnuncio":  a.link,
-		}, nil)
+		}, fmt.Errorf("elemento html não tem link do vendedor. Examinar pagina"))
+		fmt.Println("Erro ao pegar o link do vendedor no mercado livre. Cheque o log para mais detalhes")
 	}
 	a.vendedor.linkVendedor = link
 }
@@ -296,7 +310,8 @@ func (a *Anuncio) extrairDescricao(prod colly.HTMLElement) {
 		utils.LogarErroFunc("extrairDescricao", map[string]any{
 			"textoDesc": textoDesc,
 			"anuncio":   a.link,
-		}, nil)
+		}, fmt.Errorf("conteudo html do DOM da descrição com problemas. Checar manualmente"))
+		fmt.Println("Erro ao extrair descrição do anúncio. Por padrão o campo ficará em branco. Cheque o log para mais detalhes")
 		a.descricao = ""
 		return
 	}
@@ -340,50 +355,45 @@ func (a *Anuncio) montarFichaTecnica(prod *colly.HTMLElement) {
 	})
 }
 
+// TODO: metodo fallback de gerar na mesma pasta de execução caso não consiga criar pasta
 // Cria o csv em uma pasta "extracoes" com os dados extraidos dos anuncios da pesquisa
 func ExportarCSV(buscaML string, anuncios []Anuncio) error {
-	/*
-	   caso converter p/ binário forçar local da pasta, trocar para codigo abaixo
+	var pastaDestino = "extracoes"
 
-	   // Caminho relativo à pasta do executável
-	   	execPath, err := os.Executable()
-	   	var pastaExtracoes string
-	   	if err != nil {
-	   		// Fallback: usa o diretório atual
-	   		fmt.Println("⚠️  Aviso: não foi possível detectar o caminho do executável. Usando diretório atual.")
-	   		pastaExtracoes = "extracoes"
-	   	} else {
-	   		execDir := filepath.Dir(execPath)
-	   		pastaExtracoes = filepath.Join(execDir, "extracoes")
-	   	}
+	caminhoExecutavel, err := os.Executable()
+	if err != nil {
+		fmt.Println("Erro ao identificar o caminho do executável:", err)
+	}
+	caminhoReal, err := filepath.EvalSymlinks(caminhoExecutavel)
+	if err != nil {
+		fmt.Println("Erro ao identificar o caminho do executável:", err)
+	}
 
-	   	// Garante que a pasta existe
-	   	if err := os.MkdirAll(pastaExtracoes, os.ModePerm); err != nil {
-	   		return fmt.Errorf("erro ao criar pasta extracoes: %v", err)
-	   	}
+	var dirBase string
+	if strings.HasPrefix(caminhoReal, os.TempDir()) {
+		// caso de execução da ferramenta NÃO compilada
+		dirBase = "."
+	} else {
+		dirBase = filepath.Join(caminhoReal)
+	}
 
-	   	// Caminho completo para o arquivo
-	   	caminhoCompleto := filepath.Join(pastaExtracoes, nomeArquivo)
-
-	   	// Cria o arquivo CSV
-	   	arquivo, err := os.Create(caminhoCompleto)
-	*/
-	const pastaDestino = "extracoes"
-	if err := os.MkdirAll(pastaDestino, os.ModePerm); err != nil {
-		return fmt.Errorf("não foi possível criar a pasta [%s]. Erro %v", pastaDestino, err)
+	dirExtracao := filepath.Join(dirBase, pastaDestino)
+	if err := os.MkdirAll(dirExtracao, os.ModePerm); err != nil {
+		return fmt.Errorf("⚠️ não foi possível criar a pasta [%s]. Erro %v", pastaDestino, err)
 	}
 
 	// define nome do arquivo. Por padrão: o-que-foi-pesquisado_no_ML_data-hoje_hora-hoje
-	nomePesquisa := strings.Replace(buscaML, " ", "-", -1)
+	nomePesquisa := strings.ReplaceAll(buscaML, " ", "-")
 	dataExecucao := time.Now().Format("02-01-2006_15-04")
-
 	nomeArquivo := fmt.Sprintf("%s_%s.csv", nomePesquisa, dataExecucao)
-	caminhoArquivo := fmt.Sprintf("%s/%s", pastaDestino, nomeArquivo)
+
+	// gera caminhoabsoluto  do arquivo cross-plataform
+	caminhoArquivo := filepath.Join(dirExtracao, nomeArquivo)
 
 	// criar arquivo
 	arquivo, err := os.Create(caminhoArquivo)
 	if err != nil {
-		return fmt.Errorf("não foi possível criar o arquivo [%s]. Erro: %v", nomeArquivo, err)
+		return fmt.Errorf("⚠️ não foi possível criar o arquivo [%s]. Erro: %v", nomeArquivo, err)
 	}
 	defer arquivo.Close()
 
@@ -421,26 +431,48 @@ func ExportarCSV(buscaML string, anuncios []Anuncio) error {
 	return err
 }
 
+// TODO: metodo fallback de gerar na mesma pasta de execução caso não consiga criar pasta
+// TODO: extrair MLB do link do anuncio
 // cria json com a ficha tecnica de cada anuncio {titulo, link, ficha_tecnica}
 // e salva na pagina de extracoes também, mas com sufixo "_fichatecnica"
 func ExportarFichaTecnica(buscaML string, anuncios []Anuncio) error {
 
-	const pastaDestino = "extracoes"
-	if err := os.MkdirAll(pastaDestino, os.ModePerm); err != nil {
-		return fmt.Errorf("não foi possível criar a pasta [%s]. Erro %v", pastaDestino, err)
+	var pastaDestino = "extracoes"
+
+	caminhoExecutavel, err := os.Executable()
+	if err != nil {
+		fmt.Println("Erro ao identificar o caminho do executável:", err)
+	}
+	caminhoReal, err := filepath.EvalSymlinks(caminhoExecutavel)
+	if err != nil {
+		fmt.Println("Erro ao identificar o caminho do executável:", err)
+	}
+
+	var dirBase string
+	if strings.HasPrefix(caminhoReal, os.TempDir()) {
+		// caso de execução da ferramenta NÃO compilada
+		dirBase = "."
+	} else {
+		dirBase = filepath.Join(caminhoReal)
+	}
+
+	dirExtracao := filepath.Join(dirBase, pastaDestino)
+	if err := os.MkdirAll(dirExtracao, os.ModePerm); err != nil {
+		return fmt.Errorf("⚠️ não foi possível criar a pasta [%s]. Erro %v", pastaDestino, err)
 	}
 
 	// define nome do arquivo. Por padrão: o-que-foi-pesquisado_no_ML_data-hoje_hora-hoje
-	nomePesquisa := strings.Replace(buscaML, " ", "-", -1)
+	nomePesquisa := strings.ReplaceAll(buscaML, " ", "-")
 	dataExecucao := time.Now().Format("02-01-2006_15-04")
-
 	nomeArquivo := fmt.Sprintf("%s_%s_fichatecnica.json", nomePesquisa, dataExecucao)
-	caminhoArquivo := fmt.Sprintf("%s/%s", pastaDestino, nomeArquivo)
+
+	// gera caminho absoluto do arquivo cross-plataform
+	caminhoArquivo := filepath.Join(dirExtracao, nomeArquivo)
 
 	// criar arquivo
 	arquivo, err := os.Create(caminhoArquivo)
 	if err != nil {
-		return fmt.Errorf("não foi possível criar o arquivo com as fichas técnicas [%s]. Erro: %v", nomeArquivo, err)
+		return fmt.Errorf("⚠️ não foi possível criar o arquivo com as fichas técnicas [%s]. Erro: %v", nomeArquivo, err)
 	}
 	defer arquivo.Close()
 
@@ -469,7 +501,6 @@ func ExportarFichaTecnica(buscaML string, anuncios []Anuncio) error {
 func NovoAnuncio(prod *colly.HTMLElement) Anuncio {
 	var a Anuncio
 	a.extrairDescricao(*prod)
-	a.vendedorNome(*prod)
 	a.montarEstoque(*prod)
 	a.montarPrecoAtual(*prod)
 	a.montarPrecoBase(*prod)
@@ -484,6 +515,6 @@ func NovoAnuncio(prod *colly.HTMLElement) Anuncio {
 	a.extrairLinkAnuncio(prod)
 	a.montarFichaTecnica(prod)
 	a.tipoLojaVendedor()
-
+	a.vendedorNome(*prod)
 	return a
 }

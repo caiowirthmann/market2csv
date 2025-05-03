@@ -1,4 +1,4 @@
-module market2csv
+module github.com/caiowirthmann/market2csv
 
 go 1.24.0
 

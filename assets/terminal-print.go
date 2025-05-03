@@ -15,14 +15,15 @@ const (
 
 Ferramenta extratora de dados de anúncios de marketplaces                                                                           
 
-Entre no site para mais informações sobre a ferramenta:
+Entre no site para mais informações e atualizações sobre a ferramenta:
 | -----> https://caiowirthmann.github.io/market2csv-site/
 
 	- Instalação
 	- Como usar
 	- Exemplos
 	- Limitações
-	- Link para download
+	- Ajuda
+	- Download
 
 
 Github com o código aberto da ferramenta:

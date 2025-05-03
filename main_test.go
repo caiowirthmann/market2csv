@@ -1,8 +1,9 @@
 package main
 
 import (
-	"market2csv/scraper/mercadolivre"
 	"testing"
+
+	"github.com/caiowirthmann/market2csv/scraper/mercadolivre"
 )
 
 func TestTratarQtdResultados(t *testing.T) {
