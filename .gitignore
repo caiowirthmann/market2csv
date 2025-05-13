@@ -1,8 +1,7 @@
 .vscode
-/variados
 /extracoes
 /logs
 /ideias
 /builds
 clear-el.sh
-build.sh
+gerar-build.sh

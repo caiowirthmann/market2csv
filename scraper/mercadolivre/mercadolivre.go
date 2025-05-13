@@ -139,7 +139,7 @@ func (a *Anuncio) tipoLojaVendedor() {
 }
 
 // check se tem full pela existencia do texto "enviado pelo", já texto full é um .svg que precede o texto
-func (a *Anuncio) temFull(prod colly.HTMLElement) {
+func (a *Anuncio) temFull(prod *colly.HTMLElement) {
 	if temFull := prod.ChildText(".ui-pdp-promotions-pill-label__text"); len(temFull) != 0 {
 		a.full = "sim"
 	} else {
@@ -148,7 +148,7 @@ func (a *Anuncio) temFull(prod colly.HTMLElement) {
 }
 
 // check para nota do anuncio, já que anuncio pode não ter rating disponivel
-func (a *Anuncio) notaAvaliacao(prod colly.HTMLElement) {
+func (a *Anuncio) notaAvaliacao(prod *colly.HTMLElement) {
 	if rating := prod.ChildText(".ui-pdp-review__rating"); len(rating) == 0 {
 		a.nota = "Sem nota"
 	} else {
@@ -157,7 +157,7 @@ func (a *Anuncio) notaAvaliacao(prod colly.HTMLElement) {
 }
 
 // check para quantidade reviews, mesmo caso da rating
-func (a *Anuncio) qtdAvaliacoes(prod colly.HTMLElement) {
+func (a *Anuncio) qtdAvaliacoes(prod *colly.HTMLElement) {
 	if qtdReviews := prod.ChildText(".ui-pdp-review__amount"); len(qtdReviews) == 0 {
 		a.quantidadeReviews = "Sem reviews"
 	} else {
@@ -168,7 +168,7 @@ func (a *Anuncio) qtdAvaliacoes(prod colly.HTMLElement) {
 // Check inicial de PREÇO COM DESCONTO ou PREÇO ATUAL DO ANUNCIO (anuncio que NÃO tem desconto).
 // Valor é "construido" na pagina do ML por 2 elementos: MONEY-AMOUNT_FRACTION e MONEY-AMOUNT_CENTS. Se for um preço "cheio", não tem o cents.
 // Por isso a função constrói o valor primeiro pegando o FRACTION e depois checando a existencia do cents, criando a string e tratando ela com a função converterPrecoFloat()
-func (a *Anuncio) montarPrecoAtual(prod colly.HTMLElement) {
+func (a *Anuncio) montarPrecoAtual(prod *colly.HTMLElement) {
 	precoAtual := prod.DOM.Find(".ui-pdp-price__second-line span.andes-money-amount__fraction").First().Text()
 	if checkprecoAtualCentavos := prod.DOM.Find(".ui-pdp-price__second-line span.andes-money-amount__cents").First().Text(); len(checkprecoAtualCentavos) != 0 { //caso tenha centavos
 		precoAtualConvertido, err := converterPrecoFloat(precoAtual, checkprecoAtualCentavos)
@@ -197,7 +197,7 @@ func (a *Anuncio) montarPrecoAtual(prod colly.HTMLElement) {
 // Para fins analíticos, faz mais sentido manter os dois valores iguais do que colocar 0(zero). Ex: caso for calculado um percentual de desconto, o calculo seria feito errado se não rolasse tratamento na função de desconto.
 // Valor é "construido" na pagina do ML por 2 elementos: MONEY-AMOUNT_FRACTION e MONEY-AMOUNT_CENTS. Se for um preço "cheio", não tem o cents.
 // Por isso a função constrói o valor primeiro pegando o FRACTION e depois checando a existencia do cents, criando a string e tratando ela com a função converterPrecoFloat()
-func (a *Anuncio) montarPrecoBase(prod colly.HTMLElement) {
+func (a *Anuncio) montarPrecoBase(prod *colly.HTMLElement) {
 	if checkPrecoBase := prod.DOM.Find(".ui-pdp-price__original-value span.andes-money-amount__fraction").First().Text(); len(checkPrecoBase) != 0 {
 		precoBaseConvertido, err := converterPrecoFloat(checkPrecoBase, prod.DOM.Find(".ui-pdp-price__original-value span.andes-money-amount__cents").First().Text())
 		if err != nil {
@@ -217,7 +217,7 @@ func (a *Anuncio) montarPrecoBase(prod colly.HTMLElement) {
 
 // É mantido como string porque o Mercado Livre só disponibiliza a quantidade de vendas por uma range.
 // Olhar função tratarQtdVendas() para explicação das ranges
-func (a *Anuncio) qtdVendas(prod colly.HTMLElement) {
+func (a *Anuncio) qtdVendas(prod *colly.HTMLElement) {
 	s, err := tratarQtdVendas(prod.ChildText("span.ui-pdp-subtitle"))
 	if err != nil {
 		utils.LogarErroFunc("qtdVendas", map[string]any{
@@ -232,7 +232,7 @@ func (a *Anuncio) qtdVendas(prod colly.HTMLElement) {
 
 // Trata a string {CONDIÇÃO | xx vendidos} que aparece nos anúncios
 // e pega somente a condição
-func (a *Anuncio) condAnuncio(prod colly.HTMLElement) {
+func (a *Anuncio) condAnuncio(prod *colly.HTMLElement) {
 	c := prod.ChildText("span.ui-pdp-subtitle")
 
 	// log caso não exista esse elemento na página
@@ -247,7 +247,7 @@ func (a *Anuncio) condAnuncio(prod colly.HTMLElement) {
 }
 
 // Trata string e remove "Vendido por "
-func (a *Anuncio) vendedorNome(prod colly.HTMLElement) {
+func (a *Anuncio) vendedorNome(prod *colly.HTMLElement) {
 	prefixo := "Vendido por "
 	vendedor := prod.ChildText(".ui-seller-data-header__title-container")
 
@@ -267,7 +267,7 @@ func (a *Anuncio) vendedorNome(prod colly.HTMLElement) {
 }
 
 // Pega link do vendedor do produto no ML
-func (a *Anuncio) vendedorLink(prod colly.HTMLElement) {
+func (a *Anuncio) vendedorLink(prod *colly.HTMLElement) {
 
 	link := prod.Request.AbsoluteURL(prod.ChildAttr("div.ui-seller-data-footer__container a", "href"))
 	if link == "" || len(link) == 0 {
@@ -283,7 +283,7 @@ func (a *Anuncio) vendedorLink(prod colly.HTMLElement) {
 // Alem do numero, pode aparecer "Ultimo disponível" --> Nesse caso irá ser transformado para 1
 // Como o texto está envolvido por ( ), é removido por filtrar o 1º e ultimo caracter da string. E isso só acontece se não for o ultimo disponível
 // Função busca as duas tags já que ML traz em lugares diferentes a informação caso seja o ultimo em estoque (genial isso kkkk)
-func (a *Anuncio) montarEstoque(prod colly.HTMLElement) {
+func (a *Anuncio) montarEstoque(prod *colly.HTMLElement) {
 	estoqueNaoUltimo := prod.ChildText(".ui-pdp-buybox__quantity__available") // caso estoque > 1, vai ter a string (x disponíveis), e acima de 5 começa a mostrar por range com +x disponível (kkkk)
 	estoqueUltimo := prod.ChildText(".ui-pdp-buybox__quantity p")             // caso seja o ultimo em estoque, essa string sera "Último disponível!", e caso não seja, vai estar em branco
 	ultimoEstoque := "Último disponível!"
@@ -304,7 +304,7 @@ func (a *Anuncio) montarEstoque(prod colly.HTMLElement) {
 }
 
 // Pega descrição do anuncio. Vem com algumas formatações html simplificada mas por enquanto é relevada
-func (a *Anuncio) extrairDescricao(prod colly.HTMLElement) {
+func (a *Anuncio) extrairDescricao(prod *colly.HTMLElement) {
 	textoDesc, err := prod.DOM.Find(".ui-pdp-description__content").Html()
 	if err != nil {
 		utils.LogarErroFunc("extrairDescricao", map[string]any{
@@ -374,7 +374,7 @@ func ExportarCSV(buscaML string, anuncios []Anuncio) error {
 		// caso de execução da ferramenta NÃO compilada
 		dirBase = "."
 	} else {
-		dirBase = filepath.Join(caminhoReal)
+		dirBase = filepath.Dir(caminhoReal)
 	}
 
 	dirExtracao := filepath.Join(dirBase, pastaDestino)
@@ -453,7 +453,7 @@ func ExportarFichaTecnica(buscaML string, anuncios []Anuncio) error {
 		// caso de execução da ferramenta NÃO compilada
 		dirBase = "."
 	} else {
-		dirBase = filepath.Join(caminhoReal)
+		dirBase = filepath.Dir(caminhoReal)
 	}
 
 	dirExtracao := filepath.Join(dirBase, pastaDestino)
@@ -500,21 +500,21 @@ func ExportarFichaTecnica(buscaML string, anuncios []Anuncio) error {
 // Encapsula funções do scrape das info do anuncio
 func NovoAnuncio(prod *colly.HTMLElement) Anuncio {
 	var a Anuncio
-	a.extrairDescricao(*prod)
-	a.montarEstoque(*prod)
-	a.montarPrecoAtual(*prod)
-	a.montarPrecoBase(*prod)
-	a.notaAvaliacao(*prod)
-	a.qtdAvaliacoes(*prod)
-	a.qtdVendas(*prod)
-	a.condAnuncio(*prod)
-	a.temFull(*prod)
-	a.temPatrocinado()
-	a.vendedorLink(*prod)
 	a.tituloAnuncio(prod)
 	a.extrairLinkAnuncio(prod)
+	a.extrairDescricao(prod)
+	a.montarEstoque(prod)
+	a.montarPrecoAtual(prod)
+	a.montarPrecoBase(prod)
+	a.notaAvaliacao(prod)
+	a.qtdAvaliacoes(prod)
+	a.qtdVendas(prod)
+	a.condAnuncio(prod)
+	a.temFull(prod)
+	a.temPatrocinado()
+	a.vendedorLink(prod)
 	a.montarFichaTecnica(prod)
 	a.tipoLojaVendedor()
-	a.vendedorNome(*prod)
+	a.vendedorNome(prod)
 	return a
 }

@@ -1,13 +1,10 @@
 package main
 
-// TODO:
-// Adicionar agentes para fezer a rotação do srape e não cair no limitador também
-// Convertes valores que estão em string para numerico
-
 import (
 	"bufio"
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
@@ -24,7 +21,10 @@ type resultadoPesquisaInicial struct {
 	quantidadeResultados int64                  // quantidade de anuncios encontrados com o termo da busca
 	anunciosColetados    int                    // quantidade de anuncios que passaram pelo scrape
 	limiteAnuncios       int                    // quantidade de anuncios que serao analisados (definida pelo usuario)
-	buscaRelacionada     []string               // campo superior indicando outras palavras-chaves relacionadas a pesquisa
+	capacidadeAnuncio    int                    // contador para calculo troca de pagina
+	indexPesquisa        int                    // numero do link "desde_x" no link da pesquisa
+	pagina               int                    // pagina atual
+	arvoreCategoria      []string               // armazena os nós da categoria da busca
 	anuncios             []mercadolivre.Anuncio // slice de anuncios da pagina de resultado
 }
 
@@ -33,7 +33,7 @@ type resultadoPesquisaInicial struct {
 // Gera o link de pesquisa no ML, que será usado no crawler
 func criarQueryPesquisa(termoPesquisa string) string {
 	var pesquisaURL, parteInicial string
-	parteInicial = strings.Replace(termoPesquisa, " ", "-", -1)
+	parteInicial = strings.ReplaceAll(termoPesquisa, " ", "-")
 	pesquisaURL = fmt.Sprintf("https://lista.mercadolivre.com.br/%s#D[A:%s]", parteInicial, termoPesquisa)
 	return pesquisaURL
 }
@@ -87,7 +87,9 @@ func main() {
 	})
 
 	resultadoScrapper := resultadoPesquisaInicial{
-		anuncios: []mercadolivre.Anuncio{},
+		anuncios:      []mercadolivre.Anuncio{},
+		indexPesquisa: 49,
+		pagina:        1,
 	}
 
 	scrapper.OnRequest(func(r *colly.Request) {
@@ -97,7 +99,7 @@ func main() {
 		fmt.Println("\nColetando dados...")
 	})
 	scrapper.OnError(func(r *colly.Response, err error) {
-		fmt.Printf("Erro: %s", err)
+		fmt.Printf("Erro: %s\n", err)
 	})
 
 	scrapperDetalhado.OnScraped(func(r *colly.Response) {
@@ -130,13 +132,18 @@ func main() {
 				break
 			}
 			inputSolicitado = true
-		}
-
-		if err := e.DOM.Find("ul.ui-search-top-keywords__list").Text(); len(err) != 0 {
-			e.ForEach("section.ui-search-top-keywords ul.ui-search-top-keywords__list a", func(i int, keyword *colly.HTMLElement) {
-				resultadoScrapper.buscaRelacionada = append(resultadoScrapper.buscaRelacionada, keyword.Text)
+			// armazena os links de cada nó da arvore de categoria
+			// ultimo link é o link usado para montar a paginação
+			// dentro do check para que não seja executado de novo quando trocar de página
+			e.ForEach(".andes-breadcrumb__item", func(i int, h *colly.HTMLElement) {
+				resultadoScrapper.arvoreCategoria = append(resultadoScrapper.arvoreCategoria, h.ChildAttr("a.andes-breadcrumb__link", "href"))
 			})
 		}
+
+		// contador para identificar quando trocar de pagina e limite da paginação
+		e.ForEach(".poly-component__title", func(i int, h *colly.HTMLElement) {
+			resultadoScrapper.capacidadeAnuncio++
+		})
 	})
 
 	// Coleta de dados do anuncio
@@ -148,6 +155,32 @@ func main() {
 		resultadoScrapper.anunciosColetados++
 		scrapperDetalhado.Visit(linkAnuncio)
 		scrapperDetalhado.Wait()
+
+		// TODO: continuar analise
+		// formula p/ pegar o indexPagina (exceto 1ª pagina) = 49+(pagina*48)
+		if resultadoScrapper.anunciosColetados >= resultadoScrapper.capacidadeAnuncio {
+			incremento := 48
+			queryPaginação := strings.ReplaceAll(termoBuscaML, " ", "-")
+			// 2a pagina de resultados (1a que é com link "construido") tem essa estrutura estranha
+			// 2a é Desde_49_xxxx
+			// 3a em diante é 49+(pagina*48
+			// exemplo: vv
+			// https://lista.mercadolivre.com.br/saude/suplementos-alimentares/whey-morango-dux_Desde_49_NoIndex_True
+			// https://lista.mercadolivre.com.br/saude/suplementos-alimentares/whey-morango-dux_Desde_97_NoIndex_True
+			if resultadoScrapper.pagina == 1 {
+				linkProximaPagina := fmt.Sprintf("%s/%s_Desde_%v_NoIndex_True", resultadoScrapper.arvoreCategoria[len(resultadoScrapper.arvoreCategoria)-1],
+					queryPaginação, resultadoScrapper.indexPesquisa)
+				resultadoScrapper.pagina++
+				fmt.Println("Visitando próxima página")
+				scrapper.Visit(linkProximaPagina)
+			} else {
+				linkProximaPagina := fmt.Sprintf("%s/%s_Desde_%v_NoIndex_True", resultadoScrapper.arvoreCategoria[len(resultadoScrapper.arvoreCategoria)-1],
+					queryPaginação, resultadoScrapper.indexPesquisa+(resultadoScrapper.pagina*incremento))
+				resultadoScrapper.pagina++
+				fmt.Println("Visitando próxima página")
+				scrapper.Visit(linkProximaPagina)
+			}
+		}
 	})
 
 	scrapperDetalhado.OnHTML("body main", func(prod *colly.HTMLElement) {
@@ -157,16 +190,8 @@ func main() {
 		resultadoScrapper.anuncios = append(resultadoScrapper.anuncios, anuncio)
 	})
 
-	scrapper.OnHTML("li.andes-pagination__button--next a", func(e *colly.HTMLElement) {
-		if resultadoScrapper.anunciosColetados >= resultadoScrapper.limiteAnuncios {
-			return
-		}
-		proximaPagina := e.Request.AbsoluteURL(e.Attr("href"))
-		fmt.Println("Visitando próxima página")
-		e.Request.Visit(proximaPagina)
-	})
-
 	scrapper.Visit(queryPesquisa)
+	// scrapperDetalhado.Wait()
 
 	err := mercadolivre.ExportarCSV(termoBuscaML, resultadoScrapper.anuncios)
 	if err != nil {
@@ -184,6 +209,15 @@ func main() {
 
 	fim := time.Since(começo)
 
-	fmt.Printf("Tempo de execução: %.2s\n", fim)
+	fmt.Printf("Tempo de execução: %s\n", fim)
+
+	// apenas para garantir que a janela do terminal não fecha automaticamente
+	// após a execução da ferramente, já que no windows se rodar dando duplo-cliue no .exe
+	// existe esse comportamento, já que teoricamente a aplicação encerrou
+	// unix não rola porque é executado pelo terminal
+	if runtime.GOOS == "windows" {
+		fmt.Println("\nPressione ENTER para sair...")
+		fmt.Scanln()
+	}
 
 }
