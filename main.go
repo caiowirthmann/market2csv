@@ -197,15 +197,17 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		fmt.Println("CSV com os dados dos anuncios do Merado Livre criado com sucesso")
+		fmt.Printf("CSV com a pesquisa por [%s] de [%d] anuncios no Merado Livre criado com sucesso!\n", termoBuscaML, resultadoScrapper.anunciosColetados)
 	}
 
 	err2 := mercadolivre.ExportarFichaTecnica(termoBuscaML, resultadoScrapper.anuncios)
 	if err2 != nil {
 		fmt.Println(err2)
 	} else {
-		fmt.Println("Arquivo JSON com a ficha tecnica de cada anuncio criado com sucesso")
+		fmt.Println("\nArquivo JSON com a ficha tecnica de cada anuncio criado com sucesso!")
 	}
+
+	fmt.Println("\nArquivos salvos na pasta extrações")
 
 	fim := time.Since(começo)
 

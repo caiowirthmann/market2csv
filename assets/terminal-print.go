@@ -18,23 +18,21 @@ Ferramenta extratora de dados de anúncios de marketplaces
 Entre no site para mais informações e atualizações sobre a ferramenta:
 | -----> https://caiowirthmann.github.io/market2csv-site/
 
-	- Instalação
 	- Como usar
+	- Instalação e Download
 	- Exemplos
 	- Limitações
-	- Ajuda
-	- Download
+	- FAQ e Suporte
 
-
-Github com o código aberto da ferramenta:
+Github com o código-fonte aberto e gratuitp da ferramenta:
 | -----> github.com/caiowirthmann/market2csv
 
-Está é uma ferramenta gratuita e open souce.
-O código está disponível no link do github acima e contribuições são bem-vindas!
+contato:
+| ---> telegram: @caiowp
+| ---> discord: musaaaa4
 
-Se você gostou da ferramenta, de uma ⭐ no repositório ajudaria bastante para divulgar o projeto!
-===================================================================================================
-
+Se curtir a ferramenta, ajude a divulga-lá. Uma ⭐ no projeto no github ajuda bastante também
+==============================================================================================
 `
 )
 

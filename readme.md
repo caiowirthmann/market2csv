@@ -1,21 +1,21 @@
-# market2csv
+# Market2csv
 
-🎯 Market2csv é uma ferramenta Open Souce gratuíta para extração de dados de anúncios de diversos marketplaces e exportação para um `.csv` com base em um termo de busca
+Market2csv é uma ferramenta Open Souce Gratuíta para extração de dados de anúncios de diversos marketplaces e exportação para um `.csv` com base em um termo de busca
 
 Fácil de usar e simples, não precisa de login na conta do marketplace, pagamento ou qualquer outra informação
 
 Compatível com sistemas Windows quanto Unix
 
----
+<br>
 
 ## 🛍️ O que o `market2csv` faz?
 
 - Aceita um termo de busca diretamente no terminal
 - Permite que o usuário defina quantos anuncios serão analisados
-- Coleta dados detalhados dos anúncios:
+- Coleta os seguintes dados de cada anúncios:
     - Titulo
-    - Condição {Novo, usado, recondicionado}
-    - Preço {Preço Base, Preço com desconto}
+    - Condição (Novo, usado, recondicionado)
+    - Preço (Preço Base, Preço com desconto)
     - Quantidade de Vendas
     - Estoque
     - Anuncio é patrocinado?
@@ -25,31 +25,40 @@ Compatível com sistemas Windows quanto Unix
     - Link do anuncio
     - Nome do vendedor
     - Link da loja do vendedor
-    - Tipo de loja do vendedor {Padrão, Eshop, Loja Oficial}
-    - Descrição
+    - Tipo de loja do vendedor (Padrão, Eshop, Loja Oficial)
+    - Descrição completa
     - Ficha técnica completa (exportado para um arquivo separado)
   
 - Exporta todos os dados para um arquivo `.csv` com o nome da pesquisa e data para fácil acesso e indexação
 - Ficha técnica é exportada para um arquivo `.json`
 - Gera um log de qualquer erro que aconteça durante a extração para facilitar a correção de bugs
----
+
 <br>
 
+
 ## 🚀 Como usar
-Demo do funcionamento da ferramenta
+### Demo do funcionamento da ferramenta
 
 
 ![Como usar a ferramenta](assets/como-usar.gif)
 
 Ao abrir a ferramenta, será solicitado que você digite o que quer pesquisar nos marketplaces para realizar a extração dos dados:
 
+
 ![pesquisa](assets/pesquisa.png)
 
-Após a ferramenta identificar a quantidade de anúncios, será solicitado quantos anúncios você quer analisar:
+Após a ferramenta identificar e mostrar a quantidade de anúncios encontrados, será solicitado quantos anúncios você quer analisar:
+- Você pode digitar qualquer valor entre 1 ou a quantidade máxima de anúncios encontrados
+    - Os anúncios são analisados por **ordem de relevância**. Exemplo:
+    - Caso digite `10`, serão analisados os *10 primeiros resultados*
+    - Anuncios patrocinados são considerados nesse ranking de relevância
+- E caso queira **TODOS OS ANÚNCIOS ENCONTRADOS**, basta digitar `0 (zero)`:
+    - Isso **levará um tempo** caso existam muitos resultados para a sua pesquisa, ou se for uma pesquisa mais genérica, como `camiseta branca` por exemplo, que retora mais de *60 mil anuncios*
 
 ![quantidade](assets/quantidade.png)
 
 A ferramenta irá mostrar um texto informativo do progresso da extração dos dados dos anúncio, e caso aconteça algum problema na extração de algum dado, será mostrado também uma mensagem informativa.
+
 E ao final, uma mensagem informando sobre a criação do arquivo `.csv` com os dados coletados e com o arquivo `.json` da ficha técnica completa de cada anúncio:
 
 ![final](assets/final.png)
@@ -57,9 +66,49 @@ E ao final, uma mensagem informando sobre a criação do arquivo `.csv` com os d
 ---
 <br>
 
-### Pré-requisitos
 
-> Caso queira rodar a ferramenta diretamente pelo código fonte
+### Executando a ferramenta no Windows
+
+1. Baixe o arquivo `.exe` ou extraia a ferramenta da pasta compactada `.zip` e salve na pasta onde quer que os arquivos das extrações sejam salvas
+
+2. Execute a ferramenta (pode ser que você tenha que dar permissão para executar como administrador, dependendo de como esteja configurado seu computador)
+
+3. As pastas `extracoes` e `logs` onde são gerados os arquivos são criados na mesma pasta onde o executável do `market2csv` está salvo
+
+*Dependendo de como esteja configurada algumas opções no seu computador, pode ser necessário executar a ferramenta como **administrador**. Para dar permissão de administrador, basta clicar com o botão direito no arquivo e clicar na opção **executar como administrador**.<br><br>Ou se quiser tornar essa opção padrão para esse arquivo, clique em **Propriedades >> Atalho >> Avançado >> Executar como administrador** e depois clicar em OK*
+<br>
+
+### Executando a ferramenta em sistemas Unix (Linux, MacOs) pelo binário compilado
+
+1. Baixe o arquivo `binário` ou extraia a ferramenta da pasta compactada `.tar.gz` e salve na pasta onde quer que os arquivos das extrações sejam salvas
+
+```bash
+# criando a pasta onde irá salvar a ferramenta
+mkdir -p market2csv
+
+# extraindo o .tar.gz para a pasta market2csv
+tar -xzvf market2csv-linux.v1.0.0.tar.gz -C market2csv
+```
+
+2. De permissão e execute o arquivo
+
+```bash
+sudo chmod +x market2csv-linux
+./market2csv-linux
+```
+
+Caso queira, você pode criar um `alias` para executar a ferramenta de qualquer lugar, basta entrar no seu `.bashrc` e adicionar a seguinte linha
+
+*Substitua o nome do alias e o caminho onde a ferramenta está salva para o seu caso*
+```bash
+alias market2csv='~/home/market2csv/market2csv-linux'
+```
+
+---
+<br>
+
+### Pré-requisitos para executar diretamente pelo código-fonte
+
 
 - Go `+1.24.0` instalado ([Caso não tenha siga as instruções aqui](https://golang.org/doc/install))
 - Git instalado ([Caso não tenha siga as intruções aqui](https://git-scm.com/))
@@ -70,33 +119,166 @@ E ao final, uma mensagem informando sobre a criação do arquivo `.csv` com os d
 git clone https://github.com/caiowirthmann/market2csv.git
 cd market2csv
 ```
-
-### Executando a ferramenta
+e execute a ferramenta
 
 ```bash
 go run main.go
 ```
 
-1. Ao executar a ferramenta, será pedido que digite o que quer pesquisar nos marketplaces: ex (`smartphone xiaomi`)
-2. A quantidade de anúncios que serão analisados e exportados
-3. Durante a extração dos dados, caso aconteça algum erro, será mostrada uma mensagem informando sobre o erro
-4. Ao terminar a extração, serão exibidas duas mensagens:
-    1. Criação do arquivo `.csv` com os dados do dos anúncios
-    2. Criação do arquivo `.json` com a ficha técnica de cada anúncio
-
-
->O arquivo CSV e JSON gerado será salvo automaticamente em uma pasta chamada `extracoes`, criada no mesmo local do executável — isso funciona tanto em Windows quanto em sistemas Unix.
-
-<br>
 ---
+<br>
 
 ## 🧾 Exemplo do arquivo gerado (.csv)
 
 > Mercado Livre
 
-|titulo|condição|preco_base|preco_atual|quantidade_vendas|estoque|patrocinado|tem_full|nota|quantidade_reviews|link_anuncio|vendedor|vendedor_link|tipo_loja|descricao|
+<!-- |titulo|condição|preco_base|preco_atual|quantidade_vendas|estoque|patrocinado|tem_full|nota|quantidade_reviews|link_anuncio|vendedor|vendedor_link|tipo_loja|descricao|
 |------|--------|-------|-------|------|-------|-----|-----|----|-----|------------|--------|-------------|---------|---------|
-|Produto 1|novo|65.99|60.99|50|4|não|sim|4.8|75|link_anuncio_marketplace|vendedor x|link_vendedor_marketplace|Loja oficial|descricao do produto completa|
+|Produto 1|novo|65.99|60.99|50|4|não|sim|4.8|75|link_anuncio_marketplace|vendedor x|link_vendedor_marketplace|Loja oficial|descricao do produto completa| -->
+
+<style>
+  .styled-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .styled-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-size: 0.9rem;
+    font-family: sans-serif;
+    color:rgb(21, 194, 125);
+  }
+
+  .styled-table thead tr {
+    background-color: #222;
+    text-align: left;
+  }
+
+  .styled-table th,
+  .styled-table td {
+    padding: 10px 12px;
+    border: 1px solid #444;
+    white-space: nowrap;
+  }
+
+  .styled-table td {
+    overflow-wrap: anywhere;
+  }
+
+  @media (max-width: 768px) {
+    .styled-table {
+      font-size: 0.75rem;
+    }
+
+    .styled-table th,
+    .styled-table td {
+      padding: 6px 8px;
+    }
+  }
+</style>
+
+<div class="styled-table-wrapper">
+  <table class="styled-table">
+    <thead>
+      <tr>
+        <th>titulo</th>
+        <th>condição</th>
+        <th>preco_base</th>
+        <th>preco_atual</th>
+        <th>quantidade_vendas</th>
+        <th>estoque</th>
+        <th>patrocinado</th>
+        <th>tem_full</th>
+        <th>nota</th>
+        <th>quantidade_reviews</th>
+        <th>link_anuncio</th>
+        <th>vendedor</th>
+        <th>vendedor_link</th>
+        <th>tipo_loja</th>
+        <th>descricao</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Xiaomi Redmi 13 Dual Sim 256-gb 8-gb Ram Global</td>
+        <td>Novo</td>
+        <td>1399.00</td>
+        <td>1287.08</td>
+        <td>50</td>
+        <td>10</td>
+        <td>não</td>
+        <td>Não</td>
+        <td>5.0</td>
+        <td>3</td>
+        <td>https://produto.mercadolivre.com.br/MLB-5349435042-xiaomi-redmi-13-dual-sim-256-gb-8-gb-ram-global-_JM?searchVariation=187511295831#is_advertising=true&searchVariation=187511295831&position=1&search_layout=stack&type=pad&tracking_id=03312ff9-b89b-4f6e-945b-a855779b7a86&is_advertising=true&ad_domain=VQCATCORE_LST&ad_position=1&ad_click_id=OTYzNWFlYmEtOGZkMi00ZGRmLThjMjYtN2I2YjlmMjViOGFh
+        </td>
+        <td>PECSHOPP</td>
+        <td>https://lista.mercadolivre.com.br/_CustId_1797698755?item_id=MLB5349435042&category_id=MLB1055&seller_id=1797698755&client=recoview-selleritems&recos_listing=true#origin=vip&component=sellerData&typeSeller=classic
+        </td>
+        <td>Padrão</td>
+        <td>APARELHO VERSÃO GLOBAL LACRADO + NOTA FISCAL + BRINDE</td>
+      </tr>
+      <tr>
+        <td>Celular Xiaomi Redmi 14c 256gb 8gb Ram Dual Sim</td>
+        <td>Novo</td>
+        <td>1359.00</td>
+        <td>1168.74</td>
+        <td>50</td>
+        <td>50</td>
+        <td>não</td>
+        <td>Não</td>
+        <td>5.0</td>
+        <td>3</td>
+        <td>https://produto.mercadolivre.com.br/MLB-5341837680-celular-xiaomi-redmi-14c-256gb-8gb-ram-dual-sim-_JM?searchVariation=187431799701#is_advertising=true&searchVariation=187431799701&position=2&search_layout=stack&type=pad&tracking_id=03312ff9-b89b-4f6e-945b-a855779b7a86&is_advertising=true&ad_domain=VQCATCORE_LST&ad_position=2&ad_click_id=MTg5MWNiMzgtMTVkNy00OTM2LWFkMWYtYWY1MTM0NGE4NDc2
+        </td>
+        <td>XIAMIELTRO</td>
+        <td>https://lista.mercadolivre.com.br/_CustId_1827271932?item_id=MLB5341837680&category_id=MLB1055&seller_id=1827271932&client=recoview-selleritems&recos_listing=true#origin=vip&component=sellerData&typeSeller=classic
+        </td>
+        <td>Padrão</td>
+        <td>FRETE GRÁTIS - Produto Original com Garantia - Loja 100% confiável</td>
+      </tr>
+      <tr>
+        <td>Redmi Note 13 Pro 5G 256 GB Preto 8 GB RAM</td>
+        <td>Novo</td>
+        <td>1727.99</td>
+        <td>1727.99</td>
+        <td>10000</td>
+        <td>25</td>
+        <td>não</td>
+        <td>Não</td>
+        <td>4.7</td>
+        <td>5090</td>
+        <td>https://www.mercadolivre.com.br/redmi-note-13-pro-5g-256-gb-preto-8-gb-ram/p/MLB29739167#polycard_client=search-nordic&searchVariation=MLB29739167&wid=MLB5334363160&position=5&search_layout=stack&type=product&tracking_id=03312ff9-b89b-4f6e-945b-a855779b7a86&sid=search</td>
+        <td>VENDASBESTSHOP</td>
+        <td>https://lista.mercadolivre.com.br/_CustId_771360381?item_id=MLB5334363160&category_id=MLB1055&seller_id=771360381&client=recoview-selleritems&recos_listing=true#origin=pdp&component=sellerData&typeSeller=classic</td>
+        <td>Padrão</td>
+        <td>Fotografia profissional no seu bolso  -  Descubra infinitas possibilidades para suas fotos com as 3 câmeras principais da sua equipe. Teste sua criatividade e brinque com iluminação, diferentes planos e efeitos para obter ótimos resultados.</td>
+      </tr>
+      <tr>
+        <td>Xiaomi Poco C75 Dual Sim 256 Gb Verde 8 Gb RAM</td>
+        <td>Novo</td>
+        <td>858.00</td>
+        <td>858.00</td>
+        <td>5000</td>
+        <td>25</td>
+        <td>não</td>
+        <td>Não</td>
+        <td>4.7</td>
+        <td>2122</td>
+        <td>https://www.mercadolivre.com.br/xiaomi-poco-c75-dual-sim-256-gb-verde-8-gb-ram/p/MLB42312701#polycard_client=search-nordic&searchVariation=MLB42312701&wid=MLB3980403061&position=8&search_layout=stack&type=product&tracking_id=03312ff9-b89b-4f6e-945b-a855779b7a86&sid=search</td>
+        <td>CHAVESANGELO70</td>
+        <td>https://lista.mercadolivre.com.br/_CustId_141417082?item_id=MLB3980403061&category_id=MLB1055&seller_id=141417082&client=recoview-selleritems&recos_listing=true#origin=pdp&component=sellerData&typeSeller=classic</td>
+        <td>Padrão</td>
+        <td>Fotografia profissional no seu bolso  -  Descubra infinitas possibilidades para suas fotos com as 3 câmeras principais da sua equipe. Teste sua criatividade e brinque com iluminação, diferentes planos e efeitos para obter ótimos resultados.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+
+
+*arquivo `.json` resumido apenas para exemplificar e não ficar extenso. A ferramenta extrai **TODOS** os campos que foram preenchidos na ficha técnica do anúncio*
 
 
 ```json
@@ -158,62 +340,7 @@ go run main.go
    "Modelo": "Xiaomi 13 lite",
    "Modelo alfanumérico": "24049RN28L",
    "Modelo de GPU": "Adreno 650",
-   "Modelo detalhado": "8 GB",
-   "Modelo do processador": "Snapdragon 870",
-   "Modelos de CPU": "1x3.2 GHz Kryo 585, 3x2.42 GHz Kryo-585, 4x1.8 GHz Kryo-585",
-   "Mês de lançamento": "Março",
-   "Nome do sistema operacional": "Android",
-   "Número de homologação da Anatel": "217582209185",
-   "Operadora": "Desbloqueado",
-   "Período de parte de reposição ou serviço técnico": "0 meses",
-   "Peso": "208 g",
-   "Pixels por polegada da tela": "386 dpi",
-   "Pixels por polegada da tela dobrada": "0 ppi",
-   "Pixels por polegada da tela dobrada secundária": "0 ppi",
-   "Pixels por polegada da tela secundária": "0 ppi",
-   "Profundidade cerrado": "0 mm",
-   "Proporção da tela": "19.5:9",
-   "Quantidade de câmeras frontais": "1",
-   "Quantidade de câmeras traseiras": "4",
-   "Quantidade de núcleos do processador": "8",
-   "Quantidade de ranhuras para cartão SIM": "2",
-   "Rede móvel": "5G",
-   "Resolução da câmera frontal principal": "20 Mpx",
-   "Resolução da câmera grande-angular": "8 Mpx",
-   "Resolução da câmera traseira principal": "108 Mpx",
-   "Resolução da tela": "1080 px x 2340 px",
-   "Resolução das câmeras frontais": "32 Mpx, 8 Mpx",
-   "Resolução das câmeras traseiras": "108 Mpx/13 Mpx/2 Mpx/2 Mpx",
-   "Resolução de vídeo da câmera frontal": "1920 px x 1080 px",
-   "Resolução de vídeo da câmera traseira": "7680 px x 4320 px",
-   "Tamanho da tela": "6,67 \"",
-   "Tamanho da tela dobrada": "0 \"",
-   "Tamanho da tela dobrada secundária": "0 \"",
-   "Tamanho da tela secundária": "0 \"",
-   "Tamanhos de cartão SIM compatíveis": "Nano-SIM",
-   "Taxa de atualização da tela": "90 Hz",
-   "Taxa de atualização da tela secundária": "0 Hz",
-   "Tecnologia da tela": "AMOLED",
-   "Tipo de bateria": "Polímero de lítio",
-   "Tipo de conector de carregamento": "USB-C",
-   "Tipo de resolução da tela": "Full HD+",
-   "Tipos de cartão de memória": "Micro-SD",
-   "Tipos de câmeras traseiras": "Macro, Regular",
-   "Velocidade do GPU": "670 MHz",
-   "Velocidade do processador": "3,2 GHz",
-   "Versão original do sistema operacional": "11",
-   "Zoom digital": "0x",
-   "Zoom híbrido": "0x",
-   "Zoom óptico": "0x",
-   "É Dual SIM": "Sim",
-   "É celular para jogos": "Sim",
-   "É celular robusto": "Sim",
-   "É resistente a salpicos": "Sim",
-   "É resistente ao pó": "Sim",
-   "É resistente à água": "Não",
-   "É à prova d'água": "Não",
-   "Última camada compatível de personalização do sistema operacional": "MIUI 14",
-   "Última versão compatível do sistema operacional": "13"
+   "Modelo detalhado": "8 GB" 
   }
  }
 ]
@@ -290,11 +417,12 @@ A coluna de `Full` da ferramenta mostra apenas se o anúncio tem Mercado Envios 
 
 - [ ] 🔴 Incluir funcionalidade para Shopee
 - [ ] 🔴 Incluir funcionalidade para Amazon
-- [ ] 🔴 Incluir funcionalidade para Shein
+- [ ] 🔴 Incluir funcionalidade para Magazine Luiza
+- [ ] 🔴 Seleção de quais marketplaces serão analisados
 - [ ] Configuração para permitir personalização do arquivo de exportação:
     - [ ] ⚪ Incluir/Não incluir campo no `.csv`
     - [ ] ⚪ Ordem das colunas
-    - [ ] 🟡 Configuração de quais campos são incluidos no arquivo da ficha técnica para identificação do anúncio (por padrão, são incluidos título e link)
+    - [ ] 🟡 Configuração de quais campos são incluidos no arquivo da ficha técnica para identificação do anúncio (por padrão, são incluidos título e link do anúncio)
     - [ ] 🟡 Pasta de exportação (nome e local)
 - [ ] Novas opções de exportação:
     - [ ] ⚪ Exportar dados do anúncio para planilhas:

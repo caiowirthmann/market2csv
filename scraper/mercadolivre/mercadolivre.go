@@ -53,7 +53,7 @@ type FichaTecnica struct {
 }
 
 // une os valores do anuncio. Caso não tenha centavos, passar a segunda string vazia que a função converte em 00
-func converterPrecoFloat(s1, s2 string) (vlrAnuncio float64, err error) {
+func ConverterPrecoFloat(s1, s2 string) (vlrAnuncio float64, err error) {
 	if s2 == "" {
 		s2 = "00"
 	}
@@ -64,7 +64,7 @@ func converterPrecoFloat(s1, s2 string) (vlrAnuncio float64, err error) {
 	if vlrAnuncio, err := strconv.ParseFloat(s, 64); err == nil {
 		return vlrAnuncio, nil
 	}
-	utils.LogarErroFunc("converterPrecoFloat", map[string]any{
+	utils.LogarErroFunc("ConverterPrecoFloat", map[string]any{
 		"s1":         s1,
 		"s2":         s2,
 		"vlrAnuncio": vlrAnuncio,
@@ -92,7 +92,7 @@ func TratarQtdResultados(resultados string) (qtdResult int64, err error) {
 // e retorna string xxx vendidos. Como o ml fornece a qtd de vendas por uma range, não faz muito sentido cortar o +... e converter em um int
 // já que ex: Um anuncio com +25 vendas (que pode ser 25 até 49), se convertido ficaria 25, não seria "preciso" por conta da range
 // Melhor um dado qualitativo preciso do que um quantitativo impreciso
-func tratarQtdVendas(textoQtdVendas string) (qtdVendas string, err error) {
+func TratarQtdVendas(textoQtdVendas string) (qtdVendas string, err error) {
 	// quando não tem vendas, fica no formato {CONDICAO}, não tem |
 	if strings.Contains(textoQtdVendas, "|") {
 		s := strings.Split(textoQtdVendas, "|")
@@ -103,7 +103,7 @@ func tratarQtdVendas(textoQtdVendas string) (qtdVendas string, err error) {
 
 		return s[1], nil
 	}
-	return "0", fmt.Errorf("anuncio sem vendas OU com formato do texto não reconhecido. Cheque o log gerado para mais detalhes")
+	return "0", fmt.Errorf("anuncio sem vendas, ou produto de catálogo(pag. sem info vendedor) ou layout alterado")
 }
 
 // check se é patrocinado pela URL. Na query tem a tag is_advertising=true, indicando que teve impulsionamento pelo mercado ADS
@@ -167,11 +167,11 @@ func (a *Anuncio) qtdAvaliacoes(prod *colly.HTMLElement) {
 
 // Check inicial de PREÇO COM DESCONTO ou PREÇO ATUAL DO ANUNCIO (anuncio que NÃO tem desconto).
 // Valor é "construido" na pagina do ML por 2 elementos: MONEY-AMOUNT_FRACTION e MONEY-AMOUNT_CENTS. Se for um preço "cheio", não tem o cents.
-// Por isso a função constrói o valor primeiro pegando o FRACTION e depois checando a existencia do cents, criando a string e tratando ela com a função converterPrecoFloat()
+// Por isso a função constrói o valor primeiro pegando o FRACTION e depois checando a existencia do cents, criando a string e tratando ela com a função ConverterPrecoFloat()
 func (a *Anuncio) montarPrecoAtual(prod *colly.HTMLElement) {
 	precoAtual := prod.DOM.Find(".ui-pdp-price__second-line span.andes-money-amount__fraction").First().Text()
 	if checkprecoAtualCentavos := prod.DOM.Find(".ui-pdp-price__second-line span.andes-money-amount__cents").First().Text(); len(checkprecoAtualCentavos) != 0 { //caso tenha centavos
-		precoAtualConvertido, err := converterPrecoFloat(precoAtual, checkprecoAtualCentavos)
+		precoAtualConvertido, err := ConverterPrecoFloat(precoAtual, checkprecoAtualCentavos)
 		if err != nil {
 			utils.LogarErroFunc("precoAtual", map[string]any{
 				"precoAtual":              precoAtual,
@@ -184,7 +184,7 @@ func (a *Anuncio) montarPrecoAtual(prod *colly.HTMLElement) {
 			a.precoAtual = precoAtualConvertido
 		}
 	} else {
-		x, err := converterPrecoFloat(precoAtual, "")
+		x, err := ConverterPrecoFloat(precoAtual, "")
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -196,10 +196,10 @@ func (a *Anuncio) montarPrecoAtual(prod *colly.HTMLElement) {
 // O Mercado Livre só mostra essa linha quando existe algum desconto no anuncio. Por isso em casos no qual NÃO existe desconto, esse valor é igual ao precoAtual
 // Para fins analíticos, faz mais sentido manter os dois valores iguais do que colocar 0(zero). Ex: caso for calculado um percentual de desconto, o calculo seria feito errado se não rolasse tratamento na função de desconto.
 // Valor é "construido" na pagina do ML por 2 elementos: MONEY-AMOUNT_FRACTION e MONEY-AMOUNT_CENTS. Se for um preço "cheio", não tem o cents.
-// Por isso a função constrói o valor primeiro pegando o FRACTION e depois checando a existencia do cents, criando a string e tratando ela com a função converterPrecoFloat()
+// Por isso a função constrói o valor primeiro pegando o FRACTION e depois checando a existencia do cents, criando a string e tratando ela com a função ConverterPrecoFloat()
 func (a *Anuncio) montarPrecoBase(prod *colly.HTMLElement) {
 	if checkPrecoBase := prod.DOM.Find(".ui-pdp-price__original-value span.andes-money-amount__fraction").First().Text(); len(checkPrecoBase) != 0 {
-		precoBaseConvertido, err := converterPrecoFloat(checkPrecoBase, prod.DOM.Find(".ui-pdp-price__original-value span.andes-money-amount__cents").First().Text())
+		precoBaseConvertido, err := ConverterPrecoFloat(checkPrecoBase, prod.DOM.Find(".ui-pdp-price__original-value span.andes-money-amount__cents").First().Text())
 		if err != nil {
 			utils.LogarErroFunc("precoBase", map[string]any{
 				"checkPrecoBase":      checkPrecoBase,
@@ -216,16 +216,16 @@ func (a *Anuncio) montarPrecoBase(prod *colly.HTMLElement) {
 }
 
 // É mantido como string porque o Mercado Livre só disponibiliza a quantidade de vendas por uma range.
-// Olhar função tratarQtdVendas() para explicação das ranges
+// Olhar função TratarQtdVendas() para explicação das ranges
 func (a *Anuncio) qtdVendas(prod *colly.HTMLElement) {
-	s, err := tratarQtdVendas(prod.ChildText("span.ui-pdp-subtitle"))
+	s, err := TratarQtdVendas(prod.ChildText("span.ui-pdp-subtitle"))
 	if err != nil {
 		utils.LogarErroFunc("qtdVendas", map[string]any{
 			"texto":       s,
 			"anuncio":     a.titulo,
 			"linkAnuncio": a.link,
 		}, err)
-		fmt.Println(err)
+		fmt.Println("anuncio sem vendas OU com formato do texto não reconhecido. Cheque o log gerado para mais detalhes")
 	}
 	a.quantidadeVendas = s
 }

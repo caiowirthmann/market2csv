@@ -29,6 +29,6 @@ Type@250ms "celular xiaomi 5g" Enter
 Sleep 5
 Screenshot assets/quantidade.png
 
-Type@200ms "7" Enter
+Type@200ms "15" Enter
 Sleep 18
 Screenshot assets/final.png
