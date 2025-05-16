@@ -8,7 +8,7 @@ Compatível com sistemas Windows quanto Unix
 
 <br>
 
-## 🛍️ O que o `market2csv` faz?
+## O que o `market2csv` faz?
 
 - Aceita um termo de busca diretamente no terminal
 - Permite que o usuário defina quantos anuncios serão analisados
@@ -36,7 +36,7 @@ Compatível com sistemas Windows quanto Unix
 <br>
 
 
-## 🚀 Como usar
+## Como usar
 ### Demo do funcionamento da ferramenta
 
 
@@ -128,7 +128,7 @@ go run main.go
 ---
 <br>
 
-## 🧾 Exemplo do arquivo gerado (.csv)
+## Exemplo do arquivo gerado (.csv)
 
 > Mercado Livre
 
@@ -136,47 +136,6 @@ go run main.go
 |------|--------|-------|-------|------|-------|-----|-----|----|-----|------------|--------|-------------|---------|---------|
 |Produto 1|novo|65.99|60.99|50|4|não|sim|4.8|75|link_anuncio_marketplace|vendedor x|link_vendedor_marketplace|Loja oficial|descricao do produto completa| -->
 
-<style>
-  .styled-table-wrapper {
-    overflow-x: auto;
-  }
-
-  .styled-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 1rem 0;
-    font-size: 0.9rem;
-    font-family: sans-serif;
-    color:rgb(21, 194, 125);
-  }
-
-  .styled-table thead tr {
-    background-color: #222;
-    text-align: left;
-  }
-
-  .styled-table th,
-  .styled-table td {
-    padding: 10px 12px;
-    border: 1px solid #444;
-    white-space: nowrap;
-  }
-
-  .styled-table td {
-    overflow-wrap: anywhere;
-  }
-
-  @media (max-width: 768px) {
-    .styled-table {
-      font-size: 0.75rem;
-    }
-
-    .styled-table th,
-    .styled-table td {
-      padding: 6px 8px;
-    }
-  }
-</style>
 
 <div class="styled-table-wrapper">
   <table class="styled-table">
@@ -349,11 +308,11 @@ go run main.go
 ---
 
 
-## ℹ️ Notas sobre limitações e comportamento da ferramenta no **Mercado Livre**
+## Limitações e comportamento da ferramenta no **Mercado Livre**
 
 Algumas informações exibidas nos anúncios do Mercado Livre são disponibilizadas de forma limitada ou não-exatas (principalmente por questões de privacidade implementadas pelo Mercado Livre) Abaixo seguem as explicações de cada campo em que isso ocorre:
 
-### 📊 Quantidade de vendas
+### Quantidade de vendas
 
 O número de vendas exibido nos anúncios do Mercado Livre segue um padrão de **faixas** após 5 unidades vendidas. Então:
 
@@ -376,7 +335,7 @@ A partir de 1000 unidades vendidas começa a aparece "mil" de forma literal ao i
 50mil a 99.999 - Exibido como +50mil Vendidos
 +100mil - Exibido como +100mil Vendidos
 ```
-### 📦 Estoque
+### Estoque
 
 Mesmo caso da quantidade de vendas, o numero **EXATO** é disponibilizado somente até **5 unidades**, após isso é disponibilizado em **faixas**
 
@@ -395,7 +354,7 @@ Mesmo caso da quantidade de vendas, o numero **EXATO** é disponibilizado soment
 
 **A FERRAMENTA NÃO FAZ ISSO**
 
-### 🚚 Frete / Full
+### Frete / Full
 
 Frete *por enquanto* não é uma opção disponibilizada na ferramenta:
 
@@ -410,7 +369,7 @@ Frete *por enquanto* não é uma opção disponibilizada na ferramenta:
 
 A coluna de `Full` da ferramenta mostra apenas se o anúncio tem Mercado Envios Full ou não. O valor em sí segue a mesma questão citada acima
 
-## 🛠️ Roadmap de funcionalidades e melhorias
+## Roadmap de funcionalidades e melhorias
 
 🔴 **Alta prioridade** || 🟡 **Média prioridade** || ⚪ **Baixa prioridade**
 
@@ -418,7 +377,7 @@ A coluna de `Full` da ferramenta mostra apenas se o anúncio tem Mercado Envios 
 - [ ] 🔴 Incluir funcionalidade para Shopee
 - [ ] 🔴 Incluir funcionalidade para Amazon
 - [ ] 🔴 Incluir funcionalidade para Magazine Luiza
-- [ ] 🔴 Seleção de quais marketplaces serão analisados
+- [ ] 🔴 Seletor de quais marketplaces a pesquisa será realizada
 - [ ] Configuração para permitir personalização do arquivo de exportação:
     - [ ] ⚪ Incluir/Não incluir campo no `.csv`
     - [ ] ⚪ Ordem das colunas
