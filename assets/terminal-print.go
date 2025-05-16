@@ -16,7 +16,7 @@ const (
 Ferramenta extratora de dados de anúncios de marketplaces                                                                           
 
 Entre no site para mais informações e atualizações sobre a ferramenta:
-| -----> https://caiowirthmann.github.io/market2csv-site/
+| -----> https://market2csv.pages.dev/
 
 	- Como usar
 	- Instalação e Download
